@@ -187,7 +187,7 @@ func FormatProjectList(projects []domain.Project) string {
 	}
 	var b strings.Builder
 	for _, p := range projects {
-		b.WriteString(fmt.Sprintf("  %s  %s\n", p.ID, p.Name))
+		fmt.Fprintf(&b, "  %s  %s\n", p.ID, p.Name)
 	}
 	return b.String()
 }
@@ -199,7 +199,7 @@ func FormatLabelList(labels []domain.Label) string {
 	}
 	var b strings.Builder
 	for _, l := range labels {
-		b.WriteString(fmt.Sprintf("  %s  %s\n", l.ID, l.Name))
+		fmt.Fprintf(&b, "  %s  %s\n", l.ID, l.Name)
 	}
 	return b.String()
 }

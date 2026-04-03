@@ -73,7 +73,7 @@ func FormatTaskDetail(task domain.Task, comments []domain.Comment, urgency float
 	if len(comments) > 0 {
 		b.WriteString("\nAnnotations:\n")
 		for _, c := range comments {
-			b.WriteString(fmt.Sprintf("  %s  %s\n", c.PostedAt.Format("2006-01-02"), c.Content))
+			fmt.Fprintf(&b, "  %s  %s\n", c.PostedAt.Format("2006-01-02"), c.Content)
 		}
 	}
 

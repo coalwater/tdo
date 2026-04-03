@@ -4,6 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var jsonOutput bool
+
 var rootCmd = &cobra.Command{
 	Use:   "tdo",
 	Short: "TaskWarrior-compatible CLI backed by Todoist",
@@ -16,6 +18,10 @@ var rootCmd = &cobra.Command{
 		}
 		return initApp()
 	},
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
 }
 
 // knownCommands is the set of subcommand names for ID-first routing.

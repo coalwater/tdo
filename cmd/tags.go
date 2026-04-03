@@ -18,6 +18,14 @@ var tagsCmd = &cobra.Command{
 			return err
 		}
 
+		if jsonOutput {
+			items := make([]labelJSON, len(labels))
+			for i, l := range labels {
+				items[i] = labelJSON{ID: l.ID, Name: l.Name}
+			}
+			return writeJSON(cmd.OutOrStdout(), items)
+		}
+
 		output := display.FormatLabelList(labels)
 		fmt.Fprint(cmd.OutOrStdout(), output)
 		return nil

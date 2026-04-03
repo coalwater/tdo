@@ -94,6 +94,14 @@ Examples:
 		if result.Task != nil {
 			content = result.Task.Content
 		}
+
+		if jsonOutput {
+			return writeJSON(cmd.OutOrStdout(), map[string]string{
+				"status": "modified",
+				"id":     result.TaskID,
+			})
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "Modified task '%s'.\n", content)
 		return nil
 	},

@@ -39,6 +39,14 @@ Examples:
 		if result.Task != nil {
 			content = result.Task.Content
 		}
+
+		if jsonOutput {
+			return writeJSON(cmd.OutOrStdout(), map[string]string{
+				"status": "annotated",
+				"id":     result.TaskID,
+			})
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "Annotated task '%s'.\n", content)
 		return nil
 	},

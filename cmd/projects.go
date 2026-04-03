@@ -18,6 +18,14 @@ var projectsCmd = &cobra.Command{
 			return err
 		}
 
+		if jsonOutput {
+			items := make([]projectJSON, len(projects))
+			for i, p := range projects {
+				items[i] = projectJSON{ID: p.ID, Name: p.Name}
+			}
+			return writeJSON(cmd.OutOrStdout(), items)
+		}
+
 		output := display.FormatProjectList(projects)
 		fmt.Fprint(cmd.OutOrStdout(), output)
 		return nil

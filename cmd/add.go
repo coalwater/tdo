@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/abushady/tdo/internal/domain"
 	"github.com/spf13/cobra"
@@ -43,6 +44,11 @@ Examples:
 		}
 
 		_ = app.Cache.InvalidateTasks()
+
+		if jsonOutput {
+			return writeJSON(cmd.OutOrStdout(), toTaskJSON(*task, app.NowLabel, time.Now()))
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "Created task %s.\n", task.ID)
 		return nil
 	},

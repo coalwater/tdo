@@ -58,6 +58,14 @@ Examples:
 		}
 
 		_ = app.Cache.InvalidateTasks()
+
+		if jsonOutput {
+			return writeJSON(cmd.OutOrStdout(), map[string]string{
+				"status": "stopped",
+				"id":     result.TaskID,
+			})
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "Stopped task '%s'.\n", task.Content)
 		return nil
 	},

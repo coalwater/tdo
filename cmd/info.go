@@ -54,7 +54,20 @@ Examples:
 			return fmt.Errorf("fetching comments: %w", err)
 		}
 
-		urgency := domain.CalculateUrgency(*task, app.NowLabel, time.Now())
+		now := time.Now()
+
+		if jsonOutput {
+			cj := make([]commentJSON, len(comments))
+			for i, c := range comments {
+				cj[i] = toCommentJSON(c)
+			}
+			return writeJSON(cmd.OutOrStdout(), map[string]any{
+				"task":     toTaskJSON(*task, app.NowLabel, now),
+				"comments": cj,
+			})
+		}
+
+		urgency := domain.CalculateUrgency(*task, app.NowLabel, now)
 		output := display.FormatTaskDetail(*task, comments, urgency)
 
 		fmt.Fprint(cmd.OutOrStdout(), output)

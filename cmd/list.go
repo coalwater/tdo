@@ -47,6 +47,17 @@ Examples:
 			return ui > uj
 		})
 
+		if jsonOutput {
+			items := make([]taskJSON, len(filtered))
+			positions := make(map[int]string, len(filtered))
+			for i, t := range filtered {
+				items[i] = toTaskJSON(t, app.NowLabel, now)
+				positions[i+1] = t.ID
+			}
+			_ = app.Cache.SetPositions(positions)
+			return writeJSON(cmd.OutOrStdout(), items)
+		}
+
 		output, positions := display.FormatTaskTable(filtered, app.NowLabel, now)
 		_ = app.Cache.SetPositions(positions)
 

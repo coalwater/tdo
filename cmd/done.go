@@ -37,6 +37,14 @@ Examples:
 		if result.Task != nil {
 			content = result.Task.Content
 		}
+
+		if jsonOutput {
+			return writeJSON(cmd.OutOrStdout(), map[string]string{
+				"status": "done",
+				"id":     result.TaskID,
+			})
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(), "Completed task '%s'.\n", content)
 		return nil
 	},

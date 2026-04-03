@@ -34,20 +34,33 @@ var nextCmd = &cobra.Command{
 			return ui > uj
 		})
 
-		// Limit to terminal height minus header/footer.
-		maxRows := 25
-		if lines := os.Getenv("LINES"); lines != "" {
-			if n, err := strconv.Atoi(lines); err == nil && n > 3 {
-				maxRows = n
+		if !jsonOutput {
+			// Limit to terminal height minus header/footer.
+			maxRows := 25
+			if lines := os.Getenv("LINES"); lines != "" {
+				if n, err := strconv.Atoi(lines); err == nil && n > 3 {
+					maxRows = n
+				}
+			}
+			maxRows -= 3 // header + footer + blank line
+
+			if maxRows < 1 {
+				maxRows = 1
+			}
+			if len(tasks) > maxRows {
+				tasks = tasks[:maxRows]
 			}
 		}
-		maxRows -= 3 // header + footer + blank line
 
-		if maxRows < 1 {
-			maxRows = 1
-		}
-		if len(tasks) > maxRows {
-			tasks = tasks[:maxRows]
+		if jsonOutput {
+			items := make([]taskJSON, len(tasks))
+			positions := make(map[int]string, len(tasks))
+			for i, t := range tasks {
+				items[i] = toTaskJSON(t, app.NowLabel, now)
+				positions[i+1] = t.ID
+			}
+			_ = app.Cache.SetPositions(positions)
+			return writeJSON(cmd.OutOrStdout(), items)
 		}
 
 		output, positions := display.FormatTaskTable(tasks, app.NowLabel, now)

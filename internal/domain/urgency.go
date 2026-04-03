@@ -11,7 +11,7 @@ const (
 	urgencyPriorityMCoeff   = 3.9
 	urgencyPriorityLCoeff   = 1.8
 	urgencyDueCoeff         = 12.0
-	urgencyActiveCoeff      = 4.0
+	urgencyNextCoeff        = 15.0
 	urgencyAgeCoeff         = 2.0
 	urgencyAnnotationsCoeff = 1.0
 	urgencyTagsCoeff        = 1.0
@@ -26,7 +26,7 @@ func CalculateUrgency(task Task, nowLabel string, now time.Time) float64 {
 
 	urgency += priorityFactor(task.Priority)
 	urgency += urgencyDueCoeff * dueFactor(task.Due, now)
-	urgency += urgencyActiveCoeff * activeFactor(task, nowLabel)
+	urgency += urgencyNextCoeff * activeFactor(task, nowLabel)
 	urgency += urgencyAgeCoeff * ageFactor(task.CreatedAt, now)
 	urgency += urgencyAnnotationsCoeff * annotationsFactor(task.CommentCount)
 	urgency += urgencyTagsCoeff * tagsFactor(len(task.Labels))

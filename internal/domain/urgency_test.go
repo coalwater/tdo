@@ -87,13 +87,13 @@ func TestUrgency(t *testing.T) {
 
 	// ── Active (started) factor ──────────────────────────────────
 
-	t.Run("active task with now label adds 4.0", func(t *testing.T) {
+	t.Run("active task with now label adds 15.0", func(t *testing.T) {
 		task := Task{Labels: []string{"now"}, CreatedAt: now}
-		// active=4.0 + tags(1 label)=0.8
-		assert.InDelta(t, 4.8, CalculateUrgency(task, nowLabel, now), 0.001)
+		// next=15.0 + tags(1 label)=0.8
+		assert.InDelta(t, 15.8, CalculateUrgency(task, nowLabel, now), 0.001)
 	})
 
-	t.Run("task without now label adds 0 for active", func(t *testing.T) {
+	t.Run("task without now label adds 0 for next", func(t *testing.T) {
 		task := Task{Labels: []string{"other"}, CreatedAt: now}
 		// only tag factor: 1 tag = 0.8
 		expected := 1.0 * 0.8
@@ -102,8 +102,8 @@ func TestUrgency(t *testing.T) {
 
 	t.Run("custom now label is respected", func(t *testing.T) {
 		task := Task{Labels: []string{"started"}, CreatedAt: now}
-		// "started" is the nowLabel, so active=4.0 + tags(1)=0.8
-		assert.InDelta(t, 4.8, CalculateUrgency(task, "started", now), 0.001)
+		// "started" is the nowLabel, so next=15.0 + tags(1)=0.8
+		assert.InDelta(t, 15.8, CalculateUrgency(task, "started", now), 0.001)
 	})
 
 	// ── Age factor ───────────────────────────────────────────────
@@ -180,9 +180,9 @@ func TestUrgency(t *testing.T) {
 	})
 
 	t.Run("now label counts as a tag too", func(t *testing.T) {
-		// "now" label: active=4.0, tags: 1 label = 0.8
+		// "now" label: next=15.0, tags: 1 label = 0.8
 		task := Task{Labels: []string{"now"}, CreatedAt: now}
-		assert.InDelta(t, 4.0+0.8, CalculateUrgency(task, nowLabel, now), 0.001)
+		assert.InDelta(t, 15.0+0.8, CalculateUrgency(task, nowLabel, now), 0.001)
 	})
 
 	// ── Project factor ───────────────────────────────────────────
@@ -216,12 +216,12 @@ func TestUrgency(t *testing.T) {
 		}
 		// priority H:     6.0 * 1.0 = 6.0
 		// due (overdue):  12.0 * 1.0 = 12.0
-		// active:         4.0 * 1.0 = 4.0
+		// next:           15.0 * 1.0 = 15.0
 		// age:            2.0 * 1.0 = 2.0
 		// annotations:    1.0 * 1.0 = 1.0
 		// tags (3):       1.0 * 1.0 = 1.0
 		// project:        1.0 * 1.0 = 1.0
-		expected := 6.0 + 12.0 + 4.0 + 2.0 + 1.0 + 1.0 + 1.0
+		expected := 6.0 + 12.0 + 15.0 + 2.0 + 1.0 + 1.0 + 1.0
 		assert.InDelta(t, expected, CalculateUrgency(task, nowLabel, now), 0.001)
 	})
 
@@ -239,13 +239,13 @@ func TestUrgency(t *testing.T) {
 		}
 		// priority H:     6.0 * 1.0 = 6.0
 		// due (today):    12.0 * ((0+14)*0.8/21 + 0.2) = 12.0 * 0.73333 = 8.8
-		// active:         4.0 * 1.0 = 4.0
+		// next:           15.0 * 1.0 = 15.0
 		// age:            2.0 * (30/365) ≈ 0.16438
 		// annotations:    1.0 * 0.8 = 0.8
 		// tags (2):       1.0 * 0.9 = 0.9
 		// project:        1.0 * 1.0 = 1.0
 		dueFactor := (14.0*0.8/21.0 + 0.2)
-		expected := 6.0 + 12.0*dueFactor + 4.0 + 2.0*(30.0/365.0) + 0.8 + 0.9 + 1.0
+		expected := 6.0 + 12.0*dueFactor + 15.0 + 2.0*(30.0/365.0) + 0.8 + 0.9 + 1.0
 		assert.InDelta(t, expected, CalculateUrgency(task, nowLabel, now), 0.001)
 	})
 

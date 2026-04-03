@@ -26,6 +26,7 @@ func TestMatchCommand(t *testing.T) {
 		{name: "unambiguous sto -> stop", input: "sto", want: "stop"},
 		{name: "ambiguous s", input: "s", wantErr: true},
 		{name: "ambiguous st", input: "st", wantErr: true},
+		{name: "unambiguous ur -> url", input: "ur", want: "url"},
 	}
 
 	for _, tt := range tests {
@@ -163,6 +164,16 @@ func TestRewriteIDArgs(t *testing.T) {
 			name: "alias abbreviation ls exact",
 			args: []string{"tdo", "3", "ls"},
 			want: []string{"tdo", "ls", "--id", "3"},
+		},
+		{
+			name: "ID-first url",
+			args: []string{"tdo", "3", "url"},
+			want: []string{"tdo", "url", "--id", "3"},
+		},
+		{
+			name: "abbreviation ur -> url",
+			args: []string{"tdo", "ur"},
+			want: []string{"tdo", "url"},
 		},
 	}
 

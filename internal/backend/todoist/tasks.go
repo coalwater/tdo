@@ -25,7 +25,6 @@ type todoistTask struct {
 	NoteCount   int              `json:"note_count"`
 	Checked     bool             `json:"checked"`
 	ParentID    string           `json:"parent_id"`
-	URL         string           `json:"url"`
 }
 
 type todoistDeadline struct {
@@ -85,7 +84,7 @@ func toDomainTask(t todoistTask) domain.Task {
 		CommentCount: t.NoteCount,
 		IsCompleted:  t.Checked,
 		ParentID:     t.ParentID,
-		URL:          t.URL,
+		URL:          "https://app.todoist.com/app/task/" + t.ID,
 	}
 
 	if task.Labels == nil {

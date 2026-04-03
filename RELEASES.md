@@ -1,5 +1,9 @@
 # Releases
 
+## v0.6.1 — 2026-04-03
+
+- feat: add filter support to `next` command (project, priority, labels, due, limit)
+
 ## v0.5.1 — 2026-04-03
 
 - fix: use TW next tag coefficient (15.0) for now label urgency

@@ -127,5 +127,5 @@ func set[T any](dir, file string, data T) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, file), b, 0o644)
+	return os.WriteFile(filepath.Join(dir, file), b, 0o600)
 }

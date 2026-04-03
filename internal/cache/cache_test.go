@@ -198,5 +198,5 @@ func backdateFile(t *testing.T, path string, age time.Duration) {
 
 	out, err := json.Marshal(raw)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, out, 0o644))
+	require.NoError(t, os.WriteFile(path, out, 0o600))
 }

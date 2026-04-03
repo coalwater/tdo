@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -43,33 +46,78 @@ var knownCommands = map[string]bool{
 	"annotate": true,
 }
 
-// RewriteIDArgs rewrites TaskWarrior-style "tdo <id> <cmd>" into
-// "tdo <cmd> --id <id>" so Cobra can route to the correct subcommand.
-// Must be called before Execute().
-func RewriteIDArgs(args []string) []string {
-	if len(args) < 3 {
-		return args
+// matchCommand resolves a possibly-abbreviated command name against knownCommands.
+// Returns the full command name on exact or unambiguous prefix match,
+// empty string on no match, or error on ambiguous match.
+func matchCommand(input string) (string, error) {
+	if input == "" {
+		return "", nil
 	}
 
-	first := args[1]
-	if knownCommands[first] {
-		return args
+	// Exact match always wins.
+	if knownCommands[input] {
+		return input, nil
 	}
 
-	// first arg is not a known command — treat it as an ID.
-	// Look for a known command in args[2:].
-	for i := 2; i < len(args); i++ {
-		if knownCommands[args[i]] {
-			// Rewrite: move the command to position 1, inject --id <id>
-			newArgs := []string{args[0], args[i], "--id", first}
-			// Append anything before the command (between first and i) and after it.
-			newArgs = append(newArgs, args[2:i]...)
-			newArgs = append(newArgs, args[i+1:]...)
-			return newArgs
+	// Collect prefix matches.
+	var matches []string
+	for k := range knownCommands {
+		if strings.HasPrefix(k, input) {
+			matches = append(matches, k)
 		}
 	}
 
-	return args
+	switch len(matches) {
+	case 0:
+		return "", nil
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("ambiguous command '%s' — matches: %s", input, strings.Join(matches, ", "))
+	}
+}
+
+// RewriteIDArgs rewrites TaskWarrior-style "tdo <id> <cmd>" into
+// "tdo <cmd> --id <id>" so Cobra can route to the correct subcommand.
+// Also expands abbreviated command names. Must be called before Execute().
+func RewriteIDArgs(args []string) ([]string, error) {
+	if len(args) < 2 {
+		return args, nil
+	}
+
+	// Try to expand args[1] as a command (handles "tdo mod pri:H").
+	first := args[1]
+	cmd, err := matchCommand(first)
+	if err != nil {
+		return nil, err
+	}
+	if cmd != "" {
+		args[1] = cmd
+		return args, nil
+	}
+
+	// args[1] is not a command — treat it as an ID.
+	if len(args) < 3 {
+		return args, nil
+	}
+
+	// Look for a known command (exact or prefix) in args[2:].
+	for i := 2; i < len(args); i++ {
+		matched, err := matchCommand(args[i])
+		if err != nil {
+			return nil, err
+		}
+		if matched != "" {
+			// Rewrite: move the command to position 1, inject --id <id>
+			newArgs := []string{args[0], matched, "--id", first}
+			// Append anything before the command (between first and i) and after it.
+			newArgs = append(newArgs, args[2:i]...)
+			newArgs = append(newArgs, args[i+1:]...)
+			return newArgs, nil
+		}
+	}
+
+	return args, nil
 }
 
 // Execute runs the root command.

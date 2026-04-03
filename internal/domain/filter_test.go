@@ -145,13 +145,18 @@ func TestParseFilter(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "unrecognized prefix ignored in filter",
-			args: []string{"foo:bar"},
-			want: Filter{},
+			name:    "unknown filter key errors",
+			args:    []string{"foo:bar"},
+			wantErr: true,
 		},
 		{
-			name: "par: not a filter attr, ignored",
-			args: []string{"par:abc"},
+			name:    "par: unknown in filter context errors",
+			args:    []string{"par:abc"},
+			wantErr: true,
+		},
+		{
+			name: "numeric key in filter ignored",
+			args: []string{"10:30"},
 			want: Filter{},
 		},
 		{
@@ -207,6 +212,22 @@ func TestParseFilter(t *testing.T) {
 				HasLabels: []string{"urgent"},
 				Limit:     10,
 			},
+		},
+		// -- separator tests
+		{
+			name: "-- stops filter parsing",
+			args: []string{"project:Work", "--", "foo:bar"},
+			want: Filter{Project: "Work"},
+		},
+		{
+			name: "-- with no following args",
+			args: []string{"project:Work", "--"},
+			want: Filter{Project: "Work"},
+		},
+		{
+			name: "label after -- discarded",
+			args: []string{"--", "+urgent"},
+			want: Filter{},
 		},
 	}
 

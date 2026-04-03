@@ -28,6 +28,9 @@ var filterAttrs = []string{"project", "priority", "due.before", "due.after", "sc
 func ParseFilter(args []string, now time.Time) (Filter, error) {
 	var f Filter
 	for _, arg := range args {
+		if arg == "--" {
+			break
+		}
 		if strings.HasPrefix(arg, "+") {
 			f.HasLabels = append(f.HasLabels, strings.TrimPrefix(arg, "+"))
 			continue

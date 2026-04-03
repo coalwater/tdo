@@ -8,7 +8,12 @@ import (
 )
 
 func main() {
-	os.Args = cmd.RewriteIDArgs(os.Args)
+	args, err := cmd.RewriteIDArgs(os.Args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Args = args
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

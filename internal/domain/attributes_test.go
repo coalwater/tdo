@@ -95,8 +95,48 @@ func TestMatchAttr(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "no match - unknown prefix",
-			arg:       "foo:bar",
+			name:    "unknown alpha key errors",
+			arg:     "foo:bar",
+			known:   known,
+			wantErr: true,
+		},
+		{
+			name:    "dotted unknown key errors",
+			arg:     "due.bfore:x",
+			known:   known,
+			wantErr: true,
+		},
+		{
+			name:      "numeric key passes through",
+			arg:       "10:30",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "single char key passes through",
+			arg:       "x:y",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "mixed alphanum key passes through",
+			arg:       "h264:profile",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "empty key passes through",
+			arg:       ":value",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "all dots key passes through",
+			arg:       "...:value",
 			known:     known,
 			wantAttr:  "",
 			wantValue: "",
@@ -385,9 +425,14 @@ func TestParseAttributes(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "unrecognized prefix treated as content",
-			args: []string{"task", "foo:bar"},
-			want: ParsedAttributes{Content: "task foo:bar"},
+			name:    "unknown attr errors",
+			args:    []string{"task", "foo:bar"},
+			wantErr: true,
+		},
+		{
+			name: "content with numeric colon ok",
+			args: []string{"meeting", "10:30"},
+			want: ParsedAttributes{Content: "meeting 10:30"},
 		},
 		{
 			name: "combined abbreviated attrs",
@@ -398,6 +443,37 @@ func TestParseAttributes(t *testing.T) {
 			name:    "due with invalid expression errors",
 			args:    []string{"task", "due:notadate"},
 			wantErr: true,
+		},
+		// -- separator tests
+		{
+			name: "-- stops attr parsing",
+			args: []string{"task", "--", "due:friday"},
+			want: ParsedAttributes{Content: "task due:friday"},
+		},
+		{
+			name: "-- stops label parsing",
+			args: []string{"task", "--", "+urgent"},
+			want: ParsedAttributes{Content: "task +urgent"},
+		},
+		{
+			name: "attrs before -- still parsed",
+			args: []string{"task", "project:Work", "--", "foo:bar"},
+			want: ParsedAttributes{Content: "task foo:bar", Project: "Work"},
+		},
+		{
+			name: "-- only marker becomes empty content",
+			args: []string{"--"},
+			want: ParsedAttributes{},
+		},
+		{
+			name: "-- at end",
+			args: []string{"task", "--"},
+			want: ParsedAttributes{Content: "task"},
+		},
+		{
+			name: "multiple colons in content after --",
+			args: []string{"--", "http://example.com"},
+			want: ParsedAttributes{Content: "http://example.com"},
 		},
 	}
 

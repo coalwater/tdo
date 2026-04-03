@@ -24,10 +24,30 @@ type ParsedAttributes struct {
 // attributeAttrs is the known attribute list for ParseAttributes.
 var attributeAttrs = []string{"project", "priority", "scheduled", "due", "recur", "description", "parent"}
 
+// looksLikeAttrKey returns true when key is 2+ characters long and consists
+// entirely of ASCII letters or dots, with at least one letter present.
+// This catches foo:bar, sched:tomorrow, due.bfore:x while passing through
+// 10:30, http://..., a:b, h264:profile.
+func looksLikeAttrKey(key string) bool {
+	if len(key) < 2 {
+		return false
+	}
+	hasLetter := false
+	for _, c := range key {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+			hasLetter = true
+		} else if c != '.' {
+			return false
+		}
+	}
+	return hasLetter
+}
+
 // matchAttr checks if arg is a colon-prefixed attribute matching one of the
 // known names. Returns the matched name, the value, and an error.
 // Exact match always wins. Otherwise requires unambiguous prefix.
-// Returns ("", "", nil) for no match, or error for ambiguous match.
+// Returns ("", "", nil) for non-attribute-shaped args, or error for ambiguous
+// or unknown attribute-shaped keys (prevents silent misparse).
 func matchAttr(arg string, known []string) (string, string, error) {
 	idx := strings.IndexByte(arg, ':')
 	if idx < 0 {
@@ -36,6 +56,10 @@ func matchAttr(arg string, known []string) (string, string, error) {
 
 	typed := arg[:idx]
 	value := arg[idx+1:]
+
+	if typed == "" {
+		return "", "", nil
+	}
 
 	// Exact match always wins.
 	for _, k := range known {
@@ -54,6 +78,9 @@ func matchAttr(arg string, known []string) (string, string, error) {
 
 	switch len(matches) {
 	case 0:
+		if looksLikeAttrKey(typed) {
+			return "", "", fmt.Errorf("unknown attribute '%s:'", typed)
+		}
 		return "", "", nil
 	case 1:
 		return matches[0], value, nil
@@ -68,8 +95,18 @@ func matchAttr(arg string, known []string) (string, string, error) {
 func ParseAttributes(args []string, now time.Time) (ParsedAttributes, error) {
 	var p ParsedAttributes
 	var contentWords []string
+	var literalMode bool
 
 	for _, arg := range args {
+		if arg == "--" {
+			literalMode = true
+			continue
+		}
+		if literalMode {
+			contentWords = append(contentWords, arg)
+			continue
+		}
+
 		// Handle labels before attribute matching.
 		if strings.HasPrefix(arg, "+") {
 			if len(arg) > 1 {

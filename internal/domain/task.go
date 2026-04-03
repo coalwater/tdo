@@ -46,7 +46,8 @@ type Task struct {
 	Content      string
 	Description  string
 	Priority     Priority
-	Due          *time.Time
+	Scheduled    *time.Time // when to work on it (maps to Todoist "due")
+	Due          *time.Time // hard deadline (maps to Todoist "deadline")
 	Labels       []string
 	Project      string
 	ProjectID    string
@@ -90,24 +91,26 @@ type Comment struct {
 
 // CreateParams holds parameters for creating a new task.
 type CreateParams struct {
-	Content     string
-	Description string
-	Priority    Priority
-	DueString   string
-	Labels      []string
-	ProjectID   string
-	Recurrence  string
-	ParentID    string
+	Content         string
+	Description     string
+	Priority        Priority
+	ScheduledString string // raw string for Todoist NLP (maps to Todoist due_string)
+	DueDate         string // resolved YYYY-MM-DD or YYYY-MM-DDThh:mm:ss (maps to Todoist deadline_date)
+	Labels          []string
+	ProjectID       string
+	Recurrence      string
+	ParentID        string
 }
 
 // UpdateParams holds parameters for updating a task. Nil fields are not updated.
 type UpdateParams struct {
-	Content      *string
-	Description  *string
-	Priority     *Priority
-	DueString    *string
-	Labels       []string
-	AddLabels    []string
-	RemoveLabels []string
-	ProjectID    *string
+	Content         *string
+	Description     *string
+	Priority        *Priority
+	ScheduledString *string // raw string for Todoist NLP (maps to Todoist due_string)
+	DueDate         *string // resolved YYYY-MM-DD or YYYY-MM-DDThh:mm:ss (nil = no change, ptr to "" = clear)
+	Labels          []string
+	AddLabels       []string
+	RemoveLabels    []string
+	ProjectID       *string
 }

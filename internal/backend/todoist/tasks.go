@@ -13,18 +13,24 @@ import (
 
 // todoistTask represents the Todoist API v1 task JSON shape.
 type todoistTask struct {
-	ID          string      `json:"id"`
-	Content     string      `json:"content"`
-	Description string      `json:"description"`
-	Priority    int         `json:"priority"`
-	Due         *todoistDue `json:"due"`
-	Labels      []string    `json:"labels"`
-	ProjectID   string      `json:"project_id"`
-	AddedAt     string      `json:"added_at"`
-	NoteCount   int         `json:"note_count"`
-	Checked     bool        `json:"checked"`
-	ParentID    string      `json:"parent_id"`
-	URL         string      `json:"url"`
+	ID          string           `json:"id"`
+	Content     string           `json:"content"`
+	Description string           `json:"description"`
+	Priority    int              `json:"priority"`
+	Due         *todoistDue      `json:"due"`
+	Deadline    *todoistDeadline `json:"deadline"`
+	Labels      []string         `json:"labels"`
+	ProjectID   string           `json:"project_id"`
+	AddedAt     string           `json:"added_at"`
+	NoteCount   int              `json:"note_count"`
+	Checked     bool             `json:"checked"`
+	ParentID    string           `json:"parent_id"`
+	URL         string           `json:"url"`
+}
+
+type todoistDeadline struct {
+	Date string `json:"date"`
+	Lang string `json:"lang"`
 }
 
 // paginatedResponse wraps list responses in the v1 API.
@@ -92,19 +98,26 @@ func toDomainTask(t todoistTask) domain.Task {
 		}
 	}
 
+	// Map Todoist due → domain Scheduled (when to work on it)
 	if t.Due != nil {
 		if t.Due.IsRecurring {
 			task.Recurrence = t.Due.String
 		}
-		// Prefer datetime over date.
 		if t.Due.Datetime != "" {
 			if dt, err := time.Parse(time.RFC3339, t.Due.Datetime); err == nil {
-				task.Due = &dt
+				task.Scheduled = &dt
 			}
 		} else if t.Due.Date != "" {
 			if dt, err := time.Parse("2006-01-02", t.Due.Date); err == nil {
-				task.Due = &dt
+				task.Scheduled = &dt
 			}
+		}
+	}
+
+	// Map Todoist deadline → domain Due (hard deadline)
+	if t.Deadline != nil && t.Deadline.Date != "" {
+		if dt, err := time.Parse("2006-01-02", t.Deadline.Date); err == nil {
+			task.Due = &dt
 		}
 	}
 
@@ -167,13 +180,14 @@ func (c *Client) GetTask(ctx context.Context, id string) (*domain.Task, error) {
 }
 
 type createTaskRequest struct {
-	Content     string   `json:"content"`
-	Description string   `json:"description,omitempty"`
-	Priority    int      `json:"priority"`
-	DueString   string   `json:"due_string,omitempty"`
-	Labels      []string `json:"labels,omitempty"`
-	ProjectID   string   `json:"project_id,omitempty"`
-	ParentID    string   `json:"parent_id,omitempty"`
+	Content      string   `json:"content"`
+	Description  string   `json:"description,omitempty"`
+	Priority     int      `json:"priority"`
+	DueString    string   `json:"due_string,omitempty"`    // for scheduled (Todoist NLP)
+	DeadlineDate *string  `json:"deadline_date,omitempty"` // for due/deadline (YYYY-MM-DD)
+	Labels       []string `json:"labels,omitempty"`
+	ProjectID    string   `json:"project_id,omitempty"`
+	ParentID     string   `json:"parent_id,omitempty"`
 }
 
 func (c *Client) CreateTask(ctx context.Context, params domain.CreateParams) (*domain.Task, error) {
@@ -181,10 +195,13 @@ func (c *Client) CreateTask(ctx context.Context, params domain.CreateParams) (*d
 		Content:     params.Content,
 		Description: params.Description,
 		Priority:    priorityToAPI(params.Priority),
-		DueString:   params.DueString,
+		DueString:   params.ScheduledString,
 		Labels:      params.Labels,
 		ProjectID:   params.ProjectID,
 		ParentID:    params.ParentID,
+	}
+	if params.DueDate != "" {
+		reqBody.DeadlineDate = &params.DueDate
 	}
 	// Use recurrence as due_string if set and due_string is empty.
 	if reqBody.DueString == "" && params.Recurrence != "" {
@@ -211,12 +228,13 @@ func (c *Client) CreateTask(ctx context.Context, params domain.CreateParams) (*d
 }
 
 type updateTaskRequest struct {
-	Content     *string  `json:"content,omitempty"`
-	Description *string  `json:"description,omitempty"`
-	Priority    *int     `json:"priority,omitempty"`
-	DueString   *string  `json:"due_string,omitempty"`
-	Labels      []string `json:"labels,omitempty"`
-	ProjectID   *string  `json:"project_id,omitempty"`
+	Content      *string  `json:"content,omitempty"`
+	Description  *string  `json:"description,omitempty"`
+	Priority     *int     `json:"priority,omitempty"`
+	DueString    *string  `json:"due_string,omitempty"`    // for scheduled
+	DeadlineDate *string  `json:"deadline_date,omitempty"` // for due/deadline
+	Labels       []string `json:"labels,omitempty"`
+	ProjectID    *string  `json:"project_id,omitempty"`
 }
 
 func (c *Client) UpdateTask(ctx context.Context, id string, params domain.UpdateParams) error {
@@ -227,7 +245,8 @@ func (c *Client) UpdateTask(ctx context.Context, id string, params domain.Update
 		p := priorityToAPI(*params.Priority)
 		req.Priority = &p
 	}
-	req.DueString = params.DueString
+	req.DueString = params.ScheduledString
+	req.DeadlineDate = params.DueDate
 	if params.Labels != nil {
 		req.Labels = params.Labels
 	}

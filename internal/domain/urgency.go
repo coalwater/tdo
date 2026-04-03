@@ -21,6 +21,7 @@ const (
 // CalculateUrgency computes a TaskWarrior-compatible urgency score for a task.
 // nowLabel is the label that marks a task as active/started.
 // now is the reference time for age and due calculations.
+// task.Due holds the hard deadline (Todoist "deadline"), which drives urgency.
 func CalculateUrgency(task Task, nowLabel string, now time.Time) float64 {
 	var urgency float64
 

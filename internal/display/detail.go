@@ -55,6 +55,13 @@ func FormatTaskDetail(task domain.Task, comments []domain.Comment, urgency float
 		b.WriteString(fieldLine("Due", dueStr))
 	}
 
+	if task.Scheduled != nil {
+		now := time.Now()
+		rel := FormatRelativeDue(*task.Scheduled, now)
+		schedStr := fmt.Sprintf("%s (%s)", task.Scheduled.Format("2006-01-02"), rel)
+		b.WriteString(fieldLine("Scheduled", schedStr))
+	}
+
 	if len(task.Labels) > 0 {
 		b.WriteString(fieldLine("Labels", strings.Join(task.Labels, ", ")))
 	}

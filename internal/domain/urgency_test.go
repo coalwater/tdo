@@ -197,6 +197,23 @@ func TestUrgency(t *testing.T) {
 		assert.InDelta(t, 0.0, CalculateUrgency(task, nowLabel, now), 0.001)
 	})
 
+	// ── Scheduled vs Due ─────────────────────────────────────────
+
+	t.Run("scheduled date does not affect urgency", func(t *testing.T) {
+		// Only Due (deadline) drives urgency, not Scheduled.
+		sched := now.Add(-10 * 24 * time.Hour) // 10 days overdue scheduled
+		task := Task{Scheduled: timePtr(sched), CreatedAt: now}
+		assert.InDelta(t, 0.0, CalculateUrgency(task, nowLabel, now), 0.001)
+	})
+
+	t.Run("urgency uses Due not Scheduled when both set", func(t *testing.T) {
+		due := now.Add(-7 * 24 * time.Hour)   // 7 days overdue → factor 1.0
+		sched := now.Add(30 * 24 * time.Hour) // 30 days in future (irrelevant)
+		task := Task{Due: timePtr(due), Scheduled: timePtr(sched), CreatedAt: now}
+		// Only due contributes: 12.0 * 1.0 = 12.0
+		assert.InDelta(t, 12.0, CalculateUrgency(task, nowLabel, now), 0.001)
+	})
+
 	// ── Edge cases ───────────────────────────────────────────────
 
 	t.Run("zero task has zero urgency", func(t *testing.T) {

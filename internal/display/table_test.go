@@ -117,6 +117,47 @@ func TestFormatTaskTable_DueFormatting(t *testing.T) {
 	assert.Contains(t, out, "-2d")
 }
 
+func TestClassifyTask_OverdueUseDueNotScheduled(t *testing.T) {
+	now := date(2025, 4, 3)
+
+	// Overdue scheduled but no due → should be normal, not overdue
+	schedOnly := domain.Task{
+		ID:        "a",
+		Content:   "Scheduled overdue",
+		Scheduled: datePtr(2025, 4, 1),
+	}
+	assert.Equal(t, statusNormal, classifyTask(schedOnly, "", now))
+
+	// Due overdue → should be overdue regardless of Scheduled
+	dueOverdue := domain.Task{
+		ID:        "b",
+		Content:   "Due overdue",
+		Due:       datePtr(2025, 4, 1),
+		Scheduled: datePtr(2025, 4, 10),
+	}
+	assert.Equal(t, statusOverdue, classifyTask(dueOverdue, "", now))
+
+	// Due today → should be dueTodayStatus regardless of Scheduled
+	dueToday := domain.Task{
+		ID:        "c",
+		Content:   "Due today",
+		Due:       datePtr(2025, 4, 3),
+		Scheduled: datePtr(2025, 3, 1),
+	}
+	assert.Equal(t, statusDueToday, classifyTask(dueToday, "", now))
+}
+
+func TestFormatTaskTable_SchedColumn(t *testing.T) {
+	now := date(2025, 4, 3)
+	tasks := []domain.Task{
+		{ID: "a", Content: "With sched", Scheduled: datePtr(2025, 4, 5)},
+		{ID: "b", Content: "No sched"},
+	}
+	out, _ := FormatTaskTable(tasks, "", now)
+	assert.Contains(t, out, "Sched")
+	assert.Contains(t, out, "+2d")
+}
+
 func TestFormatTaskTable_UrgencyColumn(t *testing.T) {
 	now := date(2025, 4, 3)
 	tasks := []domain.Task{
@@ -239,4 +280,21 @@ func TestFormatTaskDetail_CompletedStatus(t *testing.T) {
 	}
 	out := FormatTaskDetail(task, nil, 0.0)
 	assert.Contains(t, out, "Completed")
+}
+
+func TestFormatTaskDetail_WithScheduled(t *testing.T) {
+	sched := date(2025, 4, 10)
+	due := date(2025, 4, 15)
+	task := domain.Task{
+		ID:        "abc",
+		Content:   "Both dates",
+		Scheduled: &sched,
+		Due:       &due,
+		CreatedAt: date(2025, 3, 15),
+	}
+	out := FormatTaskDetail(task, nil, 5.0)
+	assert.Contains(t, out, "Scheduled")
+	assert.Contains(t, out, "2025-04-10")
+	assert.Contains(t, out, "Due")
+	assert.Contains(t, out, "2025-04-15")
 }

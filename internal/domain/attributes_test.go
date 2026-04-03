@@ -2,13 +2,14 @@ package domain
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMatchAttr(t *testing.T) {
-	known := []string{"project", "priority", "due", "recur", "description", "parent"}
+	known := []string{"project", "priority", "scheduled", "due", "recur", "description", "parent"}
 
 	tests := []struct {
 		name      string
@@ -75,6 +76,13 @@ func TestMatchAttr(t *testing.T) {
 			wantValue: "weekly",
 		},
 		{
+			name:      "unique prefix sc -> scheduled",
+			arg:       "sc:tomorrow",
+			known:     known,
+			wantAttr:  "scheduled",
+			wantValue: "tomorrow",
+		},
+		{
 			name:    "ambiguous prefix d -> due/description",
 			arg:     "d:tomorrow",
 			known:   known,
@@ -137,6 +145,9 @@ func TestMatchAttr(t *testing.T) {
 }
 
 func TestParseAttributes(t *testing.T) {
+	// Wednesday 2026-04-15 10:30:00 UTC — same as dateparse ref
+	now := time.Date(2026, 4, 15, 10, 30, 0, 0, time.UTC)
+
 	tests := []struct {
 		name    string
 		args    []string
@@ -174,9 +185,72 @@ func TestParseAttributes(t *testing.T) {
 			want: ParsedAttributes{Content: "task", Priority: PriorityH},
 		},
 		{
-			name: "due date",
+			name: "due date parses to resolved date",
 			args: []string{"task", "due:tomorrow"},
-			want: ParsedAttributes{Content: "task", DueString: "tomorrow"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-16"},
+		},
+		{
+			name: "due date with time component",
+			args: []string{"task", "due:today+8h"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-15T08:00:00"},
+		},
+		{
+			name: "due:today+12h produces datetime format",
+			args: []string{"task", "due:today+12h"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-15T12:00:00"},
+		},
+		{
+			name: "due:now+30min produces datetime format",
+			args: []string{"task", "due:now+30min"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-15T11:00:00"},
+		},
+		{
+			name: "due:eod produces datetime format (23:59:59)",
+			args: []string{"task", "due:eod"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-15T23:59:59"},
+		},
+		{
+			name: "due:eom-1d produces date-only format",
+			args: []string{"task", "due:eom-1d"},
+			// Apr 30 23:59:59 - 1d = Apr 29 23:59:59
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-29T23:59:59"},
+		},
+		{
+			name: "due:friday+1w produces date-only (no time)",
+			args: []string{"task", "due:friday+1w"},
+			// next friday Apr 17 + 7d = Apr 24
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-24"},
+		},
+		{
+			name: "due:sonm resolves next month start",
+			args: []string{"task", "due:sonm"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-05-01"},
+		},
+		{
+			name: "due:2d resolves relative from now",
+			args: []string{"task", "due:2d"},
+			// now + 2d = Apr 17 10:30:00
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-17T10:30:00"},
+		},
+		{
+			name: "due ISO date passthrough",
+			args: []string{"task", "due:2026-05-01"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-05-01"},
+		},
+		{
+			name: "due ISO datetime passthrough",
+			args: []string{"task", "due:2026-05-01T14:00:00"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-05-01T14:00:00"},
+		},
+		{
+			name: "scheduled attribute passed raw",
+			args: []string{"task", "scheduled:tomorrow"},
+			want: ParsedAttributes{Content: "task", ScheduledString: "tomorrow"},
+		},
+		{
+			name: "scheduled with NLP string",
+			args: []string{"task", "scheduled:next monday"},
+			want: ParsedAttributes{Content: "task", ScheduledString: "next monday"},
 		},
 		{
 			name: "recurrence",
@@ -200,16 +274,17 @@ func TestParseAttributes(t *testing.T) {
 		},
 		{
 			name: "combined attributes",
-			args: []string{"Buy", "groceries", "project:Home", "priority:M", "due:friday", "recur:weekly", "+shopping", "-old", "description:milk and eggs"},
+			args: []string{"Buy", "groceries", "project:Home", "priority:M", "due:friday", "scheduled:tomorrow", "recur:weekly", "+shopping", "-old", "description:milk and eggs"},
 			want: ParsedAttributes{
-				Content:      "Buy groceries",
-				Project:      "Home",
-				Priority:     PriorityM,
-				DueString:    "friday",
-				Recurrence:   "weekly",
-				Labels:       []string{"shopping"},
-				RemoveLabels: []string{"old"},
-				Description:  "milk and eggs",
+				Content:         "Buy groceries",
+				Project:         "Home",
+				Priority:        PriorityM,
+				DueDate:         "2026-04-17", // next friday from Wed Apr 15
+				ScheduledString: "tomorrow",
+				Recurrence:      "weekly",
+				Labels:          []string{"shopping"},
+				RemoveLabels:    []string{"old"},
+				Description:     "milk and eggs",
 			},
 		},
 		{
@@ -277,7 +352,7 @@ func TestParseAttributes(t *testing.T) {
 		{
 			name: "abbreviated du -> due",
 			args: []string{"task", "du:tomorrow"},
-			want: ParsedAttributes{Content: "task", DueString: "tomorrow"},
+			want: ParsedAttributes{Content: "task", DueDate: "2026-04-16"},
 		},
 		{
 			name: "abbreviated des -> description",
@@ -293,6 +368,11 @@ func TestParseAttributes(t *testing.T) {
 			name: "abbreviated rec -> recur",
 			args: []string{"task", "rec:weekly"},
 			want: ParsedAttributes{Content: "task", Recurrence: "weekly"},
+		},
+		{
+			name: "abbreviated sc -> scheduled",
+			args: []string{"task", "sc:next week"},
+			want: ParsedAttributes{Content: "task", ScheduledString: "next week"},
 		},
 		{
 			name:    "ambiguous d: errors (due/description)",
@@ -312,13 +392,18 @@ func TestParseAttributes(t *testing.T) {
 		{
 			name: "combined abbreviated attrs",
 			args: []string{"task", "pro:Next", "pri:M", "du:friday"},
-			want: ParsedAttributes{Content: "task", Project: "Next", Priority: PriorityM, DueString: "friday"},
+			want: ParsedAttributes{Content: "task", Project: "Next", Priority: PriorityM, DueDate: "2026-04-17"},
+		},
+		{
+			name:    "due with invalid expression errors",
+			args:    []string{"task", "due:notadate"},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseAttributes(tt.args)
+			got, err := ParseAttributes(tt.args, now)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

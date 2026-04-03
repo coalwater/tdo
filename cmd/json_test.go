@@ -120,12 +120,14 @@ func TestWriteJSON(t *testing.T) {
 func TestWriteJSONRoundTripsTaskFields(t *testing.T) {
 	now := time.Date(2026, 4, 3, 12, 0, 0, 0, time.UTC)
 	due := time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)
+	sched := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 
 	task := domain.Task{
 		ID:           "t1",
 		Content:      "Test task",
 		Priority:     domain.PriorityM,
 		Due:          &due,
+		Scheduled:    &sched,
 		Labels:       []string{"claude", "now"},
 		Project:      "Next",
 		ProjectID:    "proj-1",
@@ -146,6 +148,7 @@ func TestWriteJSONRoundTripsTaskFields(t *testing.T) {
 	assert.Equal(t, "Test task", result.Content)
 	assert.Equal(t, "M", result.Priority)
 	assert.Equal(t, "2026-04-03", result.Due)
+	assert.Equal(t, "2026-04-01", result.Scheduled)
 	assert.Equal(t, []string{"claude", "now"}, result.Labels)
 	assert.Equal(t, "Next", result.Project)
 	assert.Equal(t, 1, result.CommentCount)

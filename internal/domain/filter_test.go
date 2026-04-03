@@ -8,6 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// filterNow is the reference time for filter tests: Wednesday 2026-04-15 10:30 UTC.
+var filterNow = time.Date(2026, 4, 15, 10, 30, 0, 0, time.UTC)
+
 func TestParseFilter(t *testing.T) {
 	h := PriorityH
 	m := PriorityM
@@ -55,14 +58,34 @@ func TestParseFilter(t *testing.T) {
 			want: Filter{Priority: &l},
 		},
 		{
-			name: "due.before",
+			name: "due.before with ISO date",
 			args: []string{"due.before:2026-04-10"},
 			want: Filter{DueBefore: "2026-04-10"},
 		},
 		{
-			name: "due.after",
+			name: "due.after with ISO date",
 			args: []string{"due.after:2026-03-01"},
 			want: Filter{DueAfter: "2026-03-01"},
+		},
+		{
+			name: "due.before with date expression",
+			args: []string{"due.before:eow"},
+			want: Filter{DueBefore: "2026-04-19"}, // end of week = Sunday Apr 19
+		},
+		{
+			name: "due.after with date expression",
+			args: []string{"due.after:today"},
+			want: Filter{DueAfter: "2026-04-15"},
+		},
+		{
+			name: "scheduled.before",
+			args: []string{"scheduled.before:2026-04-20"},
+			want: Filter{ScheduledBefore: "2026-04-20"},
+		},
+		{
+			name: "scheduled.after",
+			args: []string{"scheduled.after:today"},
+			want: Filter{ScheduledAfter: "2026-04-15"},
 		},
 		{
 			name: "combined filters",
@@ -102,7 +125,17 @@ func TestParseFilter(t *testing.T) {
 			want: Filter{DueAfter: "2026-03-01"},
 		},
 		{
-			name:    "ambiguous d: errors in filter (due.before/due.after)",
+			name: "abbreviated scheduled.b -> scheduled.before",
+			args: []string{"scheduled.b:2026-04-20"},
+			want: Filter{ScheduledBefore: "2026-04-20"},
+		},
+		{
+			name: "abbreviated scheduled.a -> scheduled.after",
+			args: []string{"scheduled.a:2026-04-10"},
+			want: Filter{ScheduledAfter: "2026-04-10"},
+		},
+		{
+			name:    "ambiguous d: errors in filter",
 			args:    []string{"d:2026-04-10"},
 			wantErr: true,
 		},
@@ -179,7 +212,7 @@ func TestParseFilter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseFilter(tt.args)
+			got, err := ParseFilter(tt.args, filterNow)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -195,14 +228,16 @@ func TestFilterMatch(t *testing.T) {
 	m := PriorityM
 
 	dueDate := time.Date(2026, 4, 5, 0, 0, 0, 0, time.UTC)
+	schedDate := time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)
 
 	baseTask := Task{
-		ID:       "1",
-		Content:  "Buy groceries",
-		Project:  "Home",
-		Priority: PriorityH,
-		Labels:   []string{"errands", "urgent"},
-		Due:      &dueDate,
+		ID:        "1",
+		Content:   "Buy groceries",
+		Project:   "Home",
+		Priority:  PriorityH,
+		Labels:    []string{"errands", "urgent"},
+		Due:       &dueDate,
+		Scheduled: &schedDate,
 	}
 
 	noDueTask := Task{
@@ -306,6 +341,43 @@ func TestFilterMatch(t *testing.T) {
 		{
 			name:   "due.after - task has no due date",
 			filter: Filter{DueAfter: "2026-04-01"},
+			task:   noDueTask,
+			want:   false,
+		},
+		// Scheduled filters
+		{
+			name:   "scheduled.before - task scheduled is before",
+			filter: Filter{ScheduledBefore: "2026-04-10"},
+			task:   baseTask,
+			want:   true,
+		},
+		{
+			name:   "scheduled.before - task scheduled is after",
+			filter: Filter{ScheduledBefore: "2026-04-01"},
+			task:   baseTask,
+			want:   false,
+		},
+		{
+			name:   "scheduled.after - task scheduled is after",
+			filter: Filter{ScheduledAfter: "2026-04-01"},
+			task:   baseTask,
+			want:   true,
+		},
+		{
+			name:   "scheduled.after - task scheduled is before",
+			filter: Filter{ScheduledAfter: "2026-04-10"},
+			task:   baseTask,
+			want:   false,
+		},
+		{
+			name:   "scheduled.before - task has no scheduled date",
+			filter: Filter{ScheduledBefore: "2026-04-10"},
+			task:   noDueTask,
+			want:   false,
+		},
+		{
+			name:   "scheduled.after - task has no scheduled date",
+			filter: Filter{ScheduledAfter: "2026-04-01"},
 			task:   noDueTask,
 			want:   false,
 		},

@@ -4,24 +4,28 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Filter holds parsed filter criteria. Multiple criteria are AND-ed during matching.
 type Filter struct {
-	Project   string
-	Priority  *Priority
-	HasLabels []string
-	NotLabels []string
-	DueBefore string
-	DueAfter  string
-	Limit     int
+	Project         string
+	Priority        *Priority
+	HasLabels       []string
+	NotLabels       []string
+	DueBefore       string
+	DueAfter        string
+	ScheduledBefore string
+	ScheduledAfter  string
+	Limit           int
 }
 
 // filterAttrs is the known attribute list for ParseFilter.
-var filterAttrs = []string{"project", "priority", "due.before", "due.after", "limit"}
+var filterAttrs = []string{"project", "priority", "due.before", "due.after", "scheduled.before", "scheduled.after", "limit"}
 
 // ParseFilter parses TaskWarrior-style filter arguments into a Filter.
-func ParseFilter(args []string) (Filter, error) {
+// now is used to resolve date expressions in filter values.
+func ParseFilter(args []string, now time.Time) (Filter, error) {
 	var f Filter
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "+") {
@@ -45,9 +49,29 @@ func ParseFilter(args []string) (Filter, error) {
 			p := ParsePriority(value)
 			f.Priority = &p
 		case "due.before":
-			f.DueBefore = value
+			resolved, err := resolveFilterDate(value, now)
+			if err != nil {
+				return Filter{}, fmt.Errorf("invalid due.before value %q: %w", value, err)
+			}
+			f.DueBefore = resolved
 		case "due.after":
-			f.DueAfter = value
+			resolved, err := resolveFilterDate(value, now)
+			if err != nil {
+				return Filter{}, fmt.Errorf("invalid due.after value %q: %w", value, err)
+			}
+			f.DueAfter = resolved
+		case "scheduled.before":
+			resolved, err := resolveFilterDate(value, now)
+			if err != nil {
+				return Filter{}, fmt.Errorf("invalid scheduled.before value %q: %w", value, err)
+			}
+			f.ScheduledBefore = resolved
+		case "scheduled.after":
+			resolved, err := resolveFilterDate(value, now)
+			if err != nil {
+				return Filter{}, fmt.Errorf("invalid scheduled.after value %q: %w", value, err)
+			}
+			f.ScheduledAfter = resolved
 		case "limit":
 			n, err := strconv.Atoi(value)
 			if err != nil {
@@ -60,6 +84,19 @@ func ParseFilter(args []string) (Filter, error) {
 		}
 	}
 	return f, nil
+}
+
+// resolveFilterDate resolves a filter date value. If it's already YYYY-MM-DD,
+// return as-is. Otherwise try ParseDateExpr and format the result.
+func resolveFilterDate(value string, now time.Time) (string, error) {
+	if _, err := time.Parse("2006-01-02", value); err == nil {
+		return value, nil
+	}
+	t, err := ParseDateExpr(value, now)
+	if err != nil {
+		return "", err
+	}
+	return t.Format("2006-01-02"), nil
 }
 
 // Match returns true if the task satisfies all filter criteria.
@@ -88,8 +125,7 @@ func (f Filter) Match(task Task) bool {
 		if task.Due == nil {
 			return false
 		}
-		taskDue := task.Due.Format("2006-01-02")
-		if taskDue >= f.DueBefore {
+		if task.Due.Format("2006-01-02") >= f.DueBefore {
 			return false
 		}
 	}
@@ -98,8 +134,25 @@ func (f Filter) Match(task Task) bool {
 		if task.Due == nil {
 			return false
 		}
-		taskDue := task.Due.Format("2006-01-02")
-		if taskDue <= f.DueAfter {
+		if task.Due.Format("2006-01-02") <= f.DueAfter {
+			return false
+		}
+	}
+
+	if f.ScheduledBefore != "" {
+		if task.Scheduled == nil {
+			return false
+		}
+		if task.Scheduled.Format("2006-01-02") >= f.ScheduledBefore {
+			return false
+		}
+	}
+
+	if f.ScheduledAfter != "" {
+		if task.Scheduled == nil {
+			return false
+		}
+		if task.Scheduled.Format("2006-01-02") <= f.ScheduledAfter {
 			return false
 		}
 	}

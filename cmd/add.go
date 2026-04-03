@@ -13,24 +13,30 @@ var addCmd = &cobra.Command{
 	Short: "Create a new task",
 	Long: `Create a new task with optional attributes.
 
+Attributes:
+  due:<expr>        Hard deadline (parsed date expression, e.g. friday, eom-1d, 2026-05-01)
+  scheduled:<value> When to work on it (Todoist NLP, e.g. tomorrow, next monday)
+
 Examples:
-  tdo add "Fix login bug" project:Backend priority:H due:tomorrow +urgent
-  tdo add "Buy groceries" due:today +shopping`,
+  tdo add "Fix login bug" project:Backend priority:H due:friday +urgent
+  tdo add "Buy groceries" due:eom scheduled:tomorrow +shopping`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		attrs, err := domain.ParseAttributes(args)
+		now := time.Now()
+		attrs, err := domain.ParseAttributes(args, now)
 		if err != nil {
 			return err
 		}
 
 		params := domain.CreateParams{
-			Content:     attrs.Content,
-			Description: attrs.Description,
-			Priority:    attrs.Priority,
-			DueString:   attrs.DueString,
-			Labels:      attrs.Labels,
-			Recurrence:  attrs.Recurrence,
+			Content:         attrs.Content,
+			Description:     attrs.Description,
+			Priority:        attrs.Priority,
+			ScheduledString: attrs.ScheduledString,
+			DueDate:         attrs.DueDate,
+			Labels:          attrs.Labels,
+			Recurrence:      attrs.Recurrence,
 		}
 
 		if attrs.Project != "" {

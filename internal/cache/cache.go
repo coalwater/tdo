@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	tasksFile     = "tasks.json"
+	tasksFile     = "tasks_v2.json"
 	projectsFile  = "projects.json"
 	labelsFile    = "labels.json"
 	positionsFile = "positions.json"

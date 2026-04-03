@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/abushady/tdo/internal/domain"
 	"github.com/spf13/cobra"
@@ -12,12 +13,17 @@ var modifyCmd = &cobra.Command{
 	Short: "Modify a task's attributes",
 	Long: `Modify a task's attributes.
 
+Attributes:
+  due:<expr>        Hard deadline (parsed date expression, e.g. friday, eom-1d, 2026-05-01)
+  scheduled:<value> When to work on it (Todoist NLP, e.g. tomorrow, next monday)
+
 Examples:
-  tdo 3 modify priority:H due:tomorrow
+  tdo 3 modify priority:H due:friday
   tdo 3 modify project:Backend +urgent -old-tag
-  tdo 3 modify "New task content"`,
+  tdo 3 modify scheduled:tomorrow due:eom`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
+		now := time.Now()
 
 		id, _ := cmd.Flags().GetString("id")
 		if id == "" {
@@ -29,7 +35,7 @@ Examples:
 			return err
 		}
 
-		attrs, err := domain.ParseAttributes(args)
+		attrs, err := domain.ParseAttributes(args, now)
 		if err != nil {
 			return err
 		}
@@ -45,8 +51,11 @@ Examples:
 		if attrs.Priority != domain.PriorityNone {
 			params.Priority = &attrs.Priority
 		}
-		if attrs.DueString != "" {
-			params.DueString = &attrs.DueString
+		if attrs.ScheduledString != "" {
+			params.ScheduledString = &attrs.ScheduledString
+		}
+		if attrs.DueDate != "" {
+			params.DueDate = &attrs.DueDate
 		}
 
 		// Handle label add/remove by merging with current labels.

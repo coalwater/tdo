@@ -16,6 +16,7 @@ type taskJSON struct {
 	Description  string   `json:"description,omitempty"`
 	Priority     string   `json:"priority,omitempty"`
 	Due          string   `json:"due,omitempty"`
+	Scheduled    string   `json:"scheduled,omitempty"`
 	Labels       []string `json:"labels"`
 	Project      string   `json:"project,omitempty"`
 	ProjectID    string   `json:"project_id,omitempty"`
@@ -47,6 +48,9 @@ func toTaskJSON(t domain.Task, nowLabel string, now time.Time) taskJSON {
 	}
 	if t.Due != nil {
 		tj.Due = t.Due.Format("2006-01-02")
+	}
+	if t.Scheduled != nil {
+		tj.Scheduled = t.Scheduled.Format("2006-01-02")
 	}
 	if !t.CreatedAt.IsZero() {
 		tj.CreatedAt = t.CreatedAt.Format(time.RFC3339)

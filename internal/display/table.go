@@ -26,6 +26,7 @@ const (
 	colPri     = 4
 	colLabels  = 12
 	colDue     = 12
+	colSched   = 12
 	colProject = 12
 	colUrg     = 7
 )
@@ -136,13 +137,14 @@ func FormatTaskTable(tasks []domain.Task, nowLabel string, now time.Time) (strin
 	var b strings.Builder
 
 	// Header
-	header := fmt.Sprintf("%s  %s  %s  %s  %s  %s  %s  %s",
+	header := fmt.Sprintf("%s  %s  %s  %s  %s  %s  %s  %s  %s",
 		padRight("#", colNum),
 		padRight("ID", colID),
 		padRight("Content", colContent),
 		padRight("Pri", colPri),
 		padRight("Labels", colLabels),
 		padRight("Due", colDue),
+		padRight("Sched", colSched),
 		padRight("Project", colProject),
 		padLeft("Urg", colUrg),
 	)
@@ -158,15 +160,21 @@ func FormatTaskTable(tasks []domain.Task, nowLabel string, now time.Time) (strin
 			dueStr = FormatRelativeDue(*t.Due, now)
 		}
 
+		schedStr := ""
+		if t.Scheduled != nil {
+			schedStr = FormatRelativeDue(*t.Scheduled, now)
+		}
+
 		urgency := domain.CalculateUrgency(t, nowLabel, now)
 
-		row := fmt.Sprintf("%s  %s  %s  %s  %s  %s  %s  %s",
+		row := fmt.Sprintf("%s  %s  %s  %s  %s  %s  %s  %s  %s",
 			padRight(fmt.Sprintf("%d", pos), colNum),
 			padRight(truncate(t.ID, colID), colID),
 			padRight(truncate(t.Content, colContent), colContent),
 			padRight(priorityStr(t.Priority), colPri),
 			padRight(formatLabels(t.Labels), colLabels),
 			padRight(dueStr, colDue),
+			padRight(schedStr, colSched),
 			padRight(truncate(t.Project, colProject), colProject),
 			padLeft(fmt.Sprintf("%.1f", urgency), colUrg),
 		)

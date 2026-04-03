@@ -127,12 +127,12 @@ func TestListTasksPriorityMapping(t *testing.T) {
 	assert.Equal(t, domain.PriorityNone, tasks[3].Priority)
 }
 
-func TestListTasksDueAndRecurrence(t *testing.T) {
+func TestListTasksScheduledAndDeadline(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(wrapResults([]todoistTask{
 			{
 				ID:       "1",
-				Content:  "Datetime due",
+				Content:  "Datetime scheduled",
 				Priority: 1,
 				Due: &todoistDue{
 					Datetime: "2026-04-03T14:00:00Z",
@@ -142,7 +142,7 @@ func TestListTasksDueAndRecurrence(t *testing.T) {
 			},
 			{
 				ID:       "2",
-				Content:  "Date-only due",
+				Content:  "Date-only scheduled",
 				Priority: 1,
 				Due: &todoistDue{
 					Date:   "2026-04-05",
@@ -161,29 +161,66 @@ func TestListTasksDueAndRecurrence(t *testing.T) {
 			},
 			{
 				ID:       "4",
-				Content:  "No due",
+				Content:  "No due or deadline",
 				Priority: 1,
+			},
+			{
+				ID:       "5",
+				Content:  "With deadline",
+				Priority: 1,
+				Deadline: &todoistDeadline{
+					Date: "2026-04-10",
+					Lang: "en",
+				},
+			},
+			{
+				ID:       "6",
+				Content:  "Both scheduled and deadline",
+				Priority: 1,
+				Due: &todoistDue{
+					Date:   "2026-04-05",
+					String: "Apr 5",
+				},
+				Deadline: &todoistDeadline{
+					Date: "2026-04-10",
+					Lang: "en",
+				},
 			},
 		}))
 	}))
 
 	tasks, err := c.ListTasks(context.Background(), "")
 	require.NoError(t, err)
-	require.Len(t, tasks, 4)
+	require.Len(t, tasks, 6)
 
-	require.NotNil(t, tasks[0].Due)
-	assert.Equal(t, 14, tasks[0].Due.Hour())
+	// Todoist due → domain Scheduled
+	require.NotNil(t, tasks[0].Scheduled)
+	assert.Equal(t, 14, tasks[0].Scheduled.Hour())
+	assert.Nil(t, tasks[0].Due)
 
-	require.NotNil(t, tasks[1].Due)
-	assert.Equal(t, 5, tasks[1].Due.Day())
+	require.NotNil(t, tasks[1].Scheduled)
+	assert.Equal(t, 5, tasks[1].Scheduled.Day())
+	assert.Nil(t, tasks[1].Due)
 
 	assert.Equal(t, "every day", tasks[2].Recurrence)
 
 	assert.Nil(t, tasks[3].Due)
+	assert.Nil(t, tasks[3].Scheduled)
+
+	// Todoist deadline → domain Due
+	assert.Nil(t, tasks[4].Scheduled)
+	require.NotNil(t, tasks[4].Due)
+	assert.Equal(t, 10, tasks[4].Due.Day())
+
+	// Both
+	require.NotNil(t, tasks[5].Scheduled)
+	assert.Equal(t, 5, tasks[5].Scheduled.Day())
+	require.NotNil(t, tasks[5].Due)
+	assert.Equal(t, 10, tasks[5].Due.Day())
 }
 
 func TestCreateTask(t *testing.T) {
-	var gotBody createTaskRequest
+	var gotBody map[string]any
 	var gotMethod string
 
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -201,20 +238,21 @@ func TestCreateTask(t *testing.T) {
 	}))
 
 	task, err := c.CreateTask(context.Background(), domain.CreateParams{
-		Content:   "Buy groceries",
-		Priority:  domain.PriorityM,
-		Labels:    []string{"errands"},
-		ProjectID: "proj-1",
-		DueString: "tomorrow",
+		Content:         "Buy groceries",
+		Priority:        domain.PriorityM,
+		Labels:          []string{"errands"},
+		ProjectID:       "proj-1",
+		ScheduledString: "tomorrow",
+		DueDate:         "2026-04-10",
 	})
 
 	require.NoError(t, err)
 	assert.Equal(t, "POST", gotMethod)
-	assert.Equal(t, "Buy groceries", gotBody.Content)
-	assert.Equal(t, 3, gotBody.Priority)
-	assert.Equal(t, "tomorrow", gotBody.DueString)
-	assert.Equal(t, []string{"errands"}, gotBody.Labels)
-	assert.Equal(t, "proj-1", gotBody.ProjectID)
+	assert.Equal(t, "Buy groceries", gotBody["content"])
+	assert.Equal(t, float64(3), gotBody["priority"])
+	assert.Equal(t, "tomorrow", gotBody["due_string"])
+	assert.Equal(t, "2026-04-10", gotBody["deadline_date"])
+	assert.Equal(t, "proj-1", gotBody["project_id"])
 
 	assert.Equal(t, "new-1", task.ID)
 	assert.Equal(t, "Buy groceries", task.Content)

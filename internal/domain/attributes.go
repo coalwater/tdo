@@ -3,24 +3,26 @@ package domain
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ParsedAttributes holds the structured result of parsing TaskWarrior-style
 // command arguments.
 type ParsedAttributes struct {
-	Content      string
-	Project      string
-	Priority     Priority
-	DueString    string
-	Recurrence   string
-	Labels       []string
-	RemoveLabels []string
-	Description  string
-	ParentID     string
+	Content         string
+	Project         string
+	Priority        Priority
+	ScheduledString string // raw value for Todoist NLP (scheduled:value)
+	DueDate         string // resolved YYYY-MM-DD or with time (due:value → parsed)
+	Recurrence      string
+	Labels          []string
+	RemoveLabels    []string
+	Description     string
+	ParentID        string
 }
 
 // attributeAttrs is the known attribute list for ParseAttributes.
-var attributeAttrs = []string{"project", "priority", "due", "recur", "description", "parent"}
+var attributeAttrs = []string{"project", "priority", "scheduled", "due", "recur", "description", "parent"}
 
 // matchAttr checks if arg is a colon-prefixed attribute matching one of the
 // known names. Returns the matched name, the value, and an error.
@@ -63,7 +65,7 @@ func matchAttr(arg string, known []string) (string, string, error) {
 // ParseAttributes parses a slice of command arguments into structured
 // task attributes. Anything that doesn't match a known pattern is
 // collected as content words.
-func ParseAttributes(args []string) (ParsedAttributes, error) {
+func ParseAttributes(args []string, now time.Time) (ParsedAttributes, error) {
 	var p ParsedAttributes
 	var contentWords []string
 
@@ -92,8 +94,18 @@ func ParseAttributes(args []string) (ParsedAttributes, error) {
 			p.Project = value
 		case "priority":
 			p.Priority = ParsePriority(value)
+		case "scheduled":
+			p.ScheduledString = value
 		case "due":
-			p.DueString = value
+			t, err := ParseDateExpr(value, now)
+			if err != nil {
+				return ParsedAttributes{}, fmt.Errorf("invalid due date %q: %w", value, err)
+			}
+			if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
+				p.DueDate = t.Format("2006-01-02")
+			} else {
+				p.DueDate = t.Format("2006-01-02T15:04:05")
+			}
 		case "recur":
 			p.Recurrence = value
 		case "description":

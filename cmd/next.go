@@ -33,7 +33,7 @@ Examples:
 		app.EnrichProjectNames(ctx, tasks)
 
 		// Apply filters.
-		filter, err := domain.ParseFilter(args)
+		filter, err := domain.ParseFilter(args, now)
 		if err != nil {
 			return err
 		}

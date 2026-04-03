@@ -17,13 +17,13 @@ func (c *Client) ListLabels(ctx context.Context) ([]domain.Label, error) {
 		return nil, err
 	}
 
-	var raw []todoistLabel
-	if err := decodeResponse(resp, &raw); err != nil {
+	var page paginatedResponse[todoistLabel]
+	if err := decodeResponse(resp, &page); err != nil {
 		return nil, err
 	}
 
-	labels := make([]domain.Label, len(raw))
-	for i, l := range raw {
+	labels := make([]domain.Label, len(page.Results))
+	for i, l := range page.Results {
 		labels[i] = domain.Label{
 			ID:   l.ID,
 			Name: l.Name,

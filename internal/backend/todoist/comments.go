@@ -13,7 +13,7 @@ import (
 
 type todoistComment struct {
 	ID       string `json:"id"`
-	TaskID   string `json:"task_id"`
+	ItemID   string `json:"item_id"`
 	Content  string `json:"content"`
 	PostedAt string `json:"posted_at"`
 }
@@ -48,13 +48,13 @@ func (c *Client) ListComments(ctx context.Context, taskID string) ([]domain.Comm
 		return nil, err
 	}
 
-	var raw []todoistComment
-	if err := decodeResponse(resp, &raw); err != nil {
+	var page paginatedResponse[todoistComment]
+	if err := decodeResponse(resp, &page); err != nil {
 		return nil, err
 	}
 
-	comments := make([]domain.Comment, len(raw))
-	for i, c := range raw {
+	comments := make([]domain.Comment, len(page.Results))
+	for i, c := range page.Results {
 		comments[i] = *toDomainComment(c)
 	}
 	return comments, nil
@@ -63,7 +63,7 @@ func (c *Client) ListComments(ctx context.Context, taskID string) ([]domain.Comm
 func toDomainComment(c todoistComment) *domain.Comment {
 	comment := &domain.Comment{
 		ID:      c.ID,
-		TaskID:  c.TaskID,
+		TaskID:  c.ItemID,
 		Content: c.Content,
 	}
 	if c.PostedAt != "" {

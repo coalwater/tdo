@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const defaultBaseURL = "https://api.todoist.com/rest/v2"
+const defaultBaseURL = "https://api.todoist.com/api/v1"
 
 const (
 	maxRetries   = 3

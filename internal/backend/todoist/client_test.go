@@ -27,12 +27,17 @@ func newTestClient(t *testing.T, handler http.Handler) *Client {
 	return c
 }
 
+// wrapResults wraps data in a v1 paginated response.
+func wrapResults(v any) map[string]any {
+	return map[string]any{"results": v}
+}
+
 func TestAuthHeader(t *testing.T) {
 	var gotAuth string
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]todoistTask{})
+		json.NewEncoder(w).Encode(wrapResults([]todoistTask{}))
 	}))
 
 	_, err := c.ListTasks(context.Background(), "")
@@ -49,9 +54,9 @@ func TestListTasks(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:   "empty list",
+			name:     "empty list",
 			response: []todoistTask{},
-			wantLen: 0,
+			wantLen:  0,
 		},
 		{
 			name:   "with tasks",
@@ -63,7 +68,7 @@ func TestListTasks(t *testing.T) {
 					Priority:  4,
 					Labels:    []string{"errands"},
 					ProjectID: "proj-1",
-					CreatedAt: "2026-04-01T10:00:00Z",
+					AddedAt:   "2026-04-01T10:00:00Z",
 					Due: &todoistDue{
 						Date:   "2026-04-03",
 						String: "today",
@@ -84,7 +89,7 @@ func TestListTasks(t *testing.T) {
 			var gotPath string
 			c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				gotPath = r.URL.RequestURI()
-				json.NewEncoder(w).Encode(tt.response)
+				json.NewEncoder(w).Encode(wrapResults(tt.response))
 			}))
 
 			tasks, err := c.ListTasks(context.Background(), tt.filter)
@@ -104,12 +109,12 @@ func TestListTasks(t *testing.T) {
 
 func TestListTasksPriorityMapping(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]todoistTask{
+		json.NewEncoder(w).Encode(wrapResults([]todoistTask{
 			{ID: "1", Content: "High", Priority: 4},
 			{ID: "2", Content: "Medium", Priority: 3},
 			{ID: "3", Content: "Low", Priority: 2},
 			{ID: "4", Content: "None", Priority: 1},
-		})
+		}))
 	}))
 
 	tasks, err := c.ListTasks(context.Background(), "")
@@ -124,7 +129,7 @@ func TestListTasksPriorityMapping(t *testing.T) {
 
 func TestListTasksDueAndRecurrence(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]todoistTask{
+		json.NewEncoder(w).Encode(wrapResults([]todoistTask{
 			{
 				ID:       "1",
 				Content:  "Datetime due",
@@ -159,25 +164,21 @@ func TestListTasksDueAndRecurrence(t *testing.T) {
 				Content:  "No due",
 				Priority: 1,
 			},
-		})
+		}))
 	}))
 
 	tasks, err := c.ListTasks(context.Background(), "")
 	require.NoError(t, err)
 	require.Len(t, tasks, 4)
 
-	// Datetime preferred over date.
 	require.NotNil(t, tasks[0].Due)
 	assert.Equal(t, 14, tasks[0].Due.Hour())
 
-	// Date-only.
 	require.NotNil(t, tasks[1].Due)
 	assert.Equal(t, 5, tasks[1].Due.Day())
 
-	// Recurring.
 	assert.Equal(t, "every day", tasks[2].Recurrence)
 
-	// No due.
 	assert.Nil(t, tasks[3].Due)
 }
 
@@ -195,7 +196,7 @@ func TestCreateTask(t *testing.T) {
 			Priority:  3,
 			Labels:    []string{"errands"},
 			ProjectID: "proj-1",
-			CreatedAt: "2026-04-03T12:00:00Z",
+			AddedAt:   "2026-04-03T12:00:00Z",
 		})
 	}))
 
@@ -284,15 +285,11 @@ func TestRateLimitRetry(t *testing.T) {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
-		json.NewEncoder(w).Encode([]todoistTask{
+		json.NewEncoder(w).Encode(wrapResults([]todoistTask{
 			{ID: "1", Content: "Survived", Priority: 1},
-		})
+		}))
 	}))
 
-	// Override backoff in tests by using a short-lived client.
-	// The actual backoff is 1s, 2s — for tests we accept the wait
-	// or we test the attempt count. We'll test attempts.
-	// To keep tests fast, we use context timeout.
 	tasks, err := c.ListTasks(context.Background(), "")
 	require.NoError(t, err)
 	assert.Len(t, tasks, 1)
@@ -334,10 +331,10 @@ func TestNotFoundError(t *testing.T) {
 func TestListProjects(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/projects", r.URL.Path)
-		json.NewEncoder(w).Encode([]todoistProject{
+		json.NewEncoder(w).Encode(wrapResults([]todoistProject{
 			{ID: "p1", Name: "Inbox"},
 			{ID: "p2", Name: "Work"},
-		})
+		}))
 	}))
 
 	projects, err := c.ListProjects(context.Background())
@@ -352,10 +349,10 @@ func TestListProjects(t *testing.T) {
 func TestListLabels(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/labels", r.URL.Path)
-		json.NewEncoder(w).Encode([]todoistLabel{
+		json.NewEncoder(w).Encode(wrapResults([]todoistLabel{
 			{ID: "l1", Name: "urgent"},
 			{ID: "l2", Name: "home"},
-		})
+		}))
 	}))
 
 	labels, err := c.ListLabels(context.Background())
@@ -374,7 +371,7 @@ func TestAddComment(t *testing.T) {
 		json.NewDecoder(r.Body).Decode(&gotBody)
 		json.NewEncoder(w).Encode(todoistComment{
 			ID:       "c1",
-			TaskID:   "task-1",
+			ItemID:   "task-1",
 			Content:  "A note",
 			PostedAt: "2026-04-03T10:00:00Z",
 		})
@@ -391,10 +388,10 @@ func TestAddComment(t *testing.T) {
 func TestListComments(t *testing.T) {
 	c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "task-1", r.URL.Query().Get("task_id"))
-		json.NewEncoder(w).Encode([]todoistComment{
-			{ID: "c1", TaskID: "task-1", Content: "First", PostedAt: "2026-04-01T08:00:00Z"},
-			{ID: "c2", TaskID: "task-1", Content: "Second", PostedAt: "2026-04-02T09:00:00Z"},
-		})
+		json.NewEncoder(w).Encode(wrapResults([]todoistComment{
+			{ID: "c1", ItemID: "task-1", Content: "First", PostedAt: "2026-04-01T08:00:00Z"},
+			{ID: "c2", ItemID: "task-1", Content: "Second", PostedAt: "2026-04-02T09:00:00Z"},
+		}))
 	}))
 
 	comments, err := c.ListComments(context.Background(), "task-1")

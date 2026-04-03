@@ -11,20 +11,26 @@ import (
 	"github.com/abushady/tdo/internal/domain"
 )
 
-// todoistTask represents the Todoist API task JSON shape.
+// todoistTask represents the Todoist API v1 task JSON shape.
 type todoistTask struct {
-	ID           string       `json:"id"`
-	Content      string       `json:"content"`
-	Description  string       `json:"description"`
-	Priority     int          `json:"priority"`
-	Due          *todoistDue  `json:"due"`
-	Labels       []string     `json:"labels"`
-	ProjectID    string       `json:"project_id"`
-	CreatedAt    string       `json:"created_at"`
-	CommentCount int          `json:"comment_count"`
-	IsCompleted  bool         `json:"is_completed"`
-	ParentID     string       `json:"parent_id"`
-	URL          string       `json:"url"`
+	ID          string       `json:"id"`
+	Content     string       `json:"content"`
+	Description string       `json:"description"`
+	Priority    int          `json:"priority"`
+	Due         *todoistDue  `json:"due"`
+	Labels      []string     `json:"labels"`
+	ProjectID   string       `json:"project_id"`
+	AddedAt     string       `json:"added_at"`
+	NoteCount   int          `json:"note_count"`
+	Checked     bool         `json:"checked"`
+	ParentID    string       `json:"parent_id"`
+	URL         string       `json:"url"`
+}
+
+// paginatedResponse wraps list responses in the v1 API.
+type paginatedResponse[T any] struct {
+	Results []T    `json:"results"`
+	NextCursor string `json:"next_cursor,omitempty"`
 }
 
 type todoistDue struct {
@@ -70,8 +76,8 @@ func toDomainTask(t todoistTask) domain.Task {
 		Priority:     priorityFromAPI(t.Priority),
 		Labels:       t.Labels,
 		ProjectID:    t.ProjectID,
-		CommentCount: t.CommentCount,
-		IsCompleted:  t.IsCompleted,
+		CommentCount: t.NoteCount,
+		IsCompleted:  t.Checked,
 		ParentID:     t.ParentID,
 		URL:          t.URL,
 	}
@@ -80,8 +86,8 @@ func toDomainTask(t todoistTask) domain.Task {
 		task.Labels = []string{}
 	}
 
-	if t.CreatedAt != "" {
-		if ct, err := time.Parse(time.RFC3339, t.CreatedAt); err == nil {
+	if t.AddedAt != "" {
+		if ct, err := time.Parse(time.RFC3339, t.AddedAt); err == nil {
 			task.CreatedAt = ct
 		}
 	}
@@ -106,26 +112,43 @@ func toDomainTask(t todoistTask) domain.Task {
 }
 
 func (c *Client) ListTasks(ctx context.Context, filter string) ([]domain.Task, error) {
-	path := "/tasks"
-	if filter != "" {
-		path += "?" + url.Values{"filter": {filter}}.Encode()
+	var allTasks []domain.Task
+	cursor := ""
+
+	for {
+		path := "/tasks"
+		params := url.Values{}
+		if filter != "" {
+			params.Set("filter", filter)
+		}
+		if cursor != "" {
+			params.Set("cursor", cursor)
+		}
+		if len(params) > 0 {
+			path += "?" + params.Encode()
+		}
+
+		resp, err := c.doRequest(ctx, "GET", path, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		var page paginatedResponse[todoistTask]
+		if err := decodeResponse(resp, &page); err != nil {
+			return nil, err
+		}
+
+		for _, t := range page.Results {
+			allTasks = append(allTasks, toDomainTask(t))
+		}
+
+		if page.NextCursor == "" {
+			break
+		}
+		cursor = page.NextCursor
 	}
 
-	resp, err := c.doRequest(ctx, "GET", path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw []todoistTask
-	if err := decodeResponse(resp, &raw); err != nil {
-		return nil, err
-	}
-
-	tasks := make([]domain.Task, len(raw))
-	for i, t := range raw {
-		tasks[i] = toDomainTask(t)
-	}
-	return tasks, nil
+	return allTasks, nil
 }
 
 func (c *Client) GetTask(ctx context.Context, id string) (*domain.Task, error) {

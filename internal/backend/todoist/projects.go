@@ -17,13 +17,13 @@ func (c *Client) ListProjects(ctx context.Context) ([]domain.Project, error) {
 		return nil, err
 	}
 
-	var raw []todoistProject
-	if err := decodeResponse(resp, &raw); err != nil {
+	var page paginatedResponse[todoistProject]
+	if err := decodeResponse(resp, &page); err != nil {
 		return nil, err
 	}
 
-	projects := make([]domain.Project, len(raw))
-	for i, p := range raw {
+	projects := make([]domain.Project, len(page.Results))
+	for i, p := range page.Results {
 		projects[i] = domain.Project{
 			ID:   p.ID,
 			Name: p.Name,

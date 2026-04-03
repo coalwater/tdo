@@ -19,3 +19,7 @@ linters-settings:
 issues:
   exclude-dirs:
     - testdata
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

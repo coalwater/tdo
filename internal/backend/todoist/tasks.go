@@ -13,23 +13,23 @@ import (
 
 // todoistTask represents the Todoist API v1 task JSON shape.
 type todoistTask struct {
-	ID          string       `json:"id"`
-	Content     string       `json:"content"`
-	Description string       `json:"description"`
-	Priority    int          `json:"priority"`
-	Due         *todoistDue  `json:"due"`
-	Labels      []string     `json:"labels"`
-	ProjectID   string       `json:"project_id"`
-	AddedAt     string       `json:"added_at"`
-	NoteCount   int          `json:"note_count"`
-	Checked     bool         `json:"checked"`
-	ParentID    string       `json:"parent_id"`
-	URL         string       `json:"url"`
+	ID          string      `json:"id"`
+	Content     string      `json:"content"`
+	Description string      `json:"description"`
+	Priority    int         `json:"priority"`
+	Due         *todoistDue `json:"due"`
+	Labels      []string    `json:"labels"`
+	ProjectID   string      `json:"project_id"`
+	AddedAt     string      `json:"added_at"`
+	NoteCount   int         `json:"note_count"`
+	Checked     bool        `json:"checked"`
+	ParentID    string      `json:"parent_id"`
+	URL         string      `json:"url"`
 }
 
 // paginatedResponse wraps list responses in the v1 API.
 type paginatedResponse[T any] struct {
-	Results []T    `json:"results"`
+	Results    []T    `json:"results"`
 	NextCursor string `json:"next_cursor,omitempty"`
 }
 

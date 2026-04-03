@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
-	normalStyle = lipgloss.NewStyle()
-	activeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // green
-	overdueStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))  // red
+	headerStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
+	normalStyle   = lipgloss.NewStyle()
+	activeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // green
+	overdueStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))  // red
 	dueTodayStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11")) // yellow
 )
 

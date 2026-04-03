@@ -13,8 +13,8 @@ import (
 const defaultBaseURL = "https://api.todoist.com/api/v1"
 
 const (
-	maxRetries   = 3
-	baseBackoff  = 1 * time.Second
+	maxRetries  = 3
+	baseBackoff = 1 * time.Second
 )
 
 // APIError represents an error response from the Todoist API.

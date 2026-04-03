@@ -82,10 +82,10 @@ type Label struct {
 
 // Comment represents a task comment/annotation.
 type Comment struct {
-	ID        string
-	TaskID    string
-	Content   string
-	PostedAt  time.Time
+	ID       string
+	TaskID   string
+	Content  string
+	PostedAt time.Time
 }
 
 // CreateParams holds parameters for creating a new task.
@@ -102,12 +102,12 @@ type CreateParams struct {
 
 // UpdateParams holds parameters for updating a task. Nil fields are not updated.
 type UpdateParams struct {
-	Content     *string
-	Description *string
-	Priority    *Priority
-	DueString   *string
-	Labels      []string
-	AddLabels   []string
+	Content      *string
+	Description  *string
+	Priority     *Priority
+	DueString    *string
+	Labels       []string
+	AddLabels    []string
 	RemoveLabels []string
-	ProjectID   *string
+	ProjectID    *string
 }

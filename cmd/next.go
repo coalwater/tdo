@@ -13,9 +13,14 @@ import (
 )
 
 var nextCmd = &cobra.Command{
-	Use:   "next",
+	Use:   "next [filter...]",
 	Short: "Show most urgent tasks",
-	Long:  "Show the most urgent tasks, limited to fit the terminal height.",
+	Long: `Show the most urgent tasks, limited to fit the terminal height.
+
+Examples:
+  tdo next
+  tdo next project:Work +urgent
+  tdo next limit:5`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		now := time.Now()
@@ -27,15 +32,28 @@ var nextCmd = &cobra.Command{
 
 		app.EnrichProjectNames(ctx, tasks)
 
+		// Apply filters.
+		filter, err := domain.ParseFilter(args)
+		if err != nil {
+			return err
+		}
+		var filtered []domain.Task
+		for _, t := range tasks {
+			if filter.Match(t) {
+				filtered = append(filtered, t)
+			}
+		}
+
 		// Sort by urgency descending.
-		sort.Slice(tasks, func(i, j int) bool {
-			ui := domain.CalculateUrgency(tasks[i], app.NowLabel, now)
-			uj := domain.CalculateUrgency(tasks[j], app.NowLabel, now)
+		sort.Slice(filtered, func(i, j int) bool {
+			ui := domain.CalculateUrgency(filtered[i], app.NowLabel, now)
+			uj := domain.CalculateUrgency(filtered[j], app.NowLabel, now)
 			return ui > uj
 		})
 
-		if !jsonOutput {
-			// Limit to terminal height minus header/footer.
+		// Apply limit: explicit limit: filter wins, otherwise cap to terminal height.
+		limit := filter.Limit
+		if limit == 0 && !jsonOutput {
 			maxRows := 25
 			if lines := os.Getenv("LINES"); lines != "" {
 				if n, err := strconv.Atoi(lines); err == nil && n > 3 {
@@ -43,19 +61,19 @@ var nextCmd = &cobra.Command{
 				}
 			}
 			maxRows -= 3 // header + footer + blank line
-
 			if maxRows < 1 {
 				maxRows = 1
 			}
-			if len(tasks) > maxRows {
-				tasks = tasks[:maxRows]
-			}
+			limit = maxRows
+		}
+		if limit > 0 && limit < len(filtered) {
+			filtered = filtered[:limit]
 		}
 
 		if jsonOutput {
-			items := make([]taskJSON, len(tasks))
-			positions := make(map[int]string, len(tasks))
-			for i, t := range tasks {
+			items := make([]taskJSON, len(filtered))
+			positions := make(map[int]string, len(filtered))
+			for i, t := range filtered {
 				items[i] = toTaskJSON(t, app.NowLabel, now)
 				positions[i+1] = t.ID
 			}
@@ -63,7 +81,7 @@ var nextCmd = &cobra.Command{
 			return writeJSON(cmd.OutOrStdout(), items)
 		}
 
-		output, positions := display.FormatTaskTable(tasks, app.NowLabel, now)
+		output, positions := display.FormatTaskTable(filtered, app.NowLabel, now)
 		_ = app.Cache.SetPositions(positions)
 
 		fmt.Fprint(cmd.OutOrStdout(), output)

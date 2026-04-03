@@ -117,6 +117,34 @@ func TestFormatTaskTable_DueFormatting(t *testing.T) {
 	assert.Contains(t, out, "-2d")
 }
 
+func TestFormatTaskTable_UrgencyColumn(t *testing.T) {
+	now := date(2025, 4, 3)
+	tasks := []domain.Task{
+		{
+			ID:        "abc123",
+			Content:   "High priority overdue",
+			Priority:  domain.PriorityH,
+			Due:       datePtr(2025, 4, 1),
+			Project:   "Work",
+			Labels:    []string{"urgent"},
+			CreatedAt: date(2025, 3, 1),
+		},
+		{
+			ID:        "def456",
+			Content:   "No attributes",
+			CreatedAt: now,
+		},
+	}
+	out, _ := FormatTaskTable(tasks, "", now)
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	// Task with priority+due+project+labels should have a non-zero urgency
+	assert.Contains(t, lines[1], "abc123")
+	assert.NotContains(t, lines[1], "  0.0")
+	// Task with no attributes should show 0.0
+	assert.Contains(t, lines[2], "def456")
+	assert.Contains(t, lines[2], "0.0")
+}
+
 // --- FormatProjectList ---
 
 func TestFormatProjectList_Empty(t *testing.T) {

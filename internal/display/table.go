@@ -158,8 +158,7 @@ func FormatTaskTable(tasks []domain.Task, nowLabel string, now time.Time) (strin
 			dueStr = FormatRelativeDue(*t.Due, now)
 		}
 
-		urgency := 0.0 // urgency is computed externally; display layer just formats
-		_ = urgency
+		urgency := domain.CalculateUrgency(t, nowLabel, now)
 
 		row := fmt.Sprintf("%s  %s  %s  %s  %s  %s  %s  %s",
 			padRight(fmt.Sprintf("%d", pos), colNum),
@@ -169,7 +168,7 @@ func FormatTaskTable(tasks []domain.Task, nowLabel string, now time.Time) (strin
 			padRight(formatLabels(t.Labels), colLabels),
 			padRight(dueStr, colDue),
 			padRight(truncate(t.Project, colProject), colProject),
-			padLeft("", colUrg),
+			padLeft(fmt.Sprintf("%.1f", urgency), colUrg),
 		)
 
 		status := classifyTask(t, nowLabel, now)

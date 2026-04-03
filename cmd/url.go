@@ -28,7 +28,7 @@ Examples:
 		}
 
 		task := result.Task
-		if task == nil {
+		if task == nil || task.URL == "" {
 			t, err := app.Backend.GetTask(ctx, result.TaskID)
 			if err != nil {
 				return err

@@ -19,7 +19,10 @@ Examples:
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		attrs := domain.ParseAttributes(args)
+		attrs, err := domain.ParseAttributes(args)
+		if err != nil {
+			return err
+		}
 
 		params := domain.CreateParams{
 			Content:     attrs.Content,

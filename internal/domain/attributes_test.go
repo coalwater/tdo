@@ -4,13 +4,144 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMatchAttr(t *testing.T) {
+	known := []string{"project", "priority", "due", "recur", "description", "parent"}
+
+	tests := []struct {
+		name      string
+		arg       string
+		known     []string
+		wantAttr  string
+		wantValue string
+		wantErr   bool
+	}{
+		{
+			name:      "no colon - not an attribute",
+			arg:       "hello",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "exact match",
+			arg:       "project:Work",
+			known:     known,
+			wantAttr:  "project",
+			wantValue: "Work",
+		},
+		{
+			name:      "unique prefix pro -> project",
+			arg:       "pro:Work",
+			known:     known,
+			wantAttr:  "project",
+			wantValue: "Work",
+		},
+		{
+			name:      "unique prefix pri -> priority",
+			arg:       "pri:H",
+			known:     known,
+			wantAttr:  "priority",
+			wantValue: "H",
+		},
+		{
+			name:      "unique prefix du -> due",
+			arg:       "du:tomorrow",
+			known:     known,
+			wantAttr:  "due",
+			wantValue: "tomorrow",
+		},
+		{
+			name:      "unique prefix des -> description",
+			arg:       "des:notes",
+			known:     known,
+			wantAttr:  "description",
+			wantValue: "notes",
+		},
+		{
+			name:      "unique prefix par -> parent",
+			arg:       "par:abc",
+			known:     known,
+			wantAttr:  "parent",
+			wantValue: "abc",
+		},
+		{
+			name:      "unique prefix rec -> recur",
+			arg:       "rec:weekly",
+			known:     known,
+			wantAttr:  "recur",
+			wantValue: "weekly",
+		},
+		{
+			name:    "ambiguous prefix d -> due/description",
+			arg:     "d:tomorrow",
+			known:   known,
+			wantErr: true,
+		},
+		{
+			name:    "ambiguous prefix p -> project/priority/parent",
+			arg:     "p:Work",
+			known:   known,
+			wantErr: true,
+		},
+		{
+			name:      "no match - unknown prefix",
+			arg:       "foo:bar",
+			known:     known,
+			wantAttr:  "",
+			wantValue: "",
+		},
+		{
+			name:      "empty value",
+			arg:       "project:",
+			known:     known,
+			wantAttr:  "project",
+			wantValue: "",
+		},
+		{
+			name:      "value with colons",
+			arg:       "due:2026-04-03T10:00:00",
+			known:     known,
+			wantAttr:  "due",
+			wantValue: "2026-04-03T10:00:00",
+		},
+		{
+			name:      "exact match wins over prefix ambiguity",
+			arg:       "due:tomorrow",
+			known:     []string{"due", "due.before", "due.after"},
+			wantAttr:  "due",
+			wantValue: "tomorrow",
+		},
+		{
+			name:    "ambiguous in filter context due.b matches nothing uniquely",
+			arg:     "d:tomorrow",
+			known:   []string{"due.before", "due.after"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attr, value, err := matchAttr(tt.arg, tt.known)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantAttr, attr)
+			assert.Equal(t, tt.wantValue, value)
+		})
+	}
+}
 
 func TestParseAttributes(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
-		want ParsedAttributes
+		name    string
+		args    []string
+		want    ParsedAttributes
+		wantErr bool
 	}{
 		{
 			name: "basic content only",
@@ -132,11 +263,67 @@ func TestParseAttributes(t *testing.T) {
 				Labels:   []string{"urgent"},
 			},
 		},
+		// Abbreviated prefix tests
+		{
+			name: "abbreviated pro -> project",
+			args: []string{"task", "pro:Next"},
+			want: ParsedAttributes{Content: "task", Project: "Next"},
+		},
+		{
+			name: "abbreviated pri -> priority",
+			args: []string{"task", "pri:H"},
+			want: ParsedAttributes{Content: "task", Priority: PriorityH},
+		},
+		{
+			name: "abbreviated du -> due",
+			args: []string{"task", "du:tomorrow"},
+			want: ParsedAttributes{Content: "task", DueString: "tomorrow"},
+		},
+		{
+			name: "abbreviated des -> description",
+			args: []string{"task", "des:notes"},
+			want: ParsedAttributes{Content: "task", Description: "notes"},
+		},
+		{
+			name: "abbreviated par -> parent",
+			args: []string{"task", "par:abc"},
+			want: ParsedAttributes{Content: "task", ParentID: "abc"},
+		},
+		{
+			name: "abbreviated rec -> recur",
+			args: []string{"task", "rec:weekly"},
+			want: ParsedAttributes{Content: "task", Recurrence: "weekly"},
+		},
+		{
+			name:    "ambiguous d: errors (due/description)",
+			args:    []string{"task", "d:tomorrow"},
+			wantErr: true,
+		},
+		{
+			name:    "ambiguous p: errors (project/priority/parent)",
+			args:    []string{"task", "p:Work"},
+			wantErr: true,
+		},
+		{
+			name: "unrecognized prefix treated as content",
+			args: []string{"task", "foo:bar"},
+			want: ParsedAttributes{Content: "task foo:bar"},
+		},
+		{
+			name: "combined abbreviated attrs",
+			args: []string{"task", "pro:Next", "pri:M", "du:friday"},
+			want: ParsedAttributes{Content: "task", Project: "Next", Priority: PriorityM, DueString: "friday"},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseAttributes(tt.args)
+			got, err := ParseAttributes(tt.args)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

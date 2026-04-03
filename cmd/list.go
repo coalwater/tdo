@@ -32,7 +32,10 @@ Examples:
 		app.EnrichProjectNames(ctx, tasks)
 
 		// Apply filters.
-		filter := domain.ParseFilter(args)
+		filter, err := domain.ParseFilter(args)
+		if err != nil {
+			return err
+		}
 		var filtered []domain.Task
 		for _, t := range tasks {
 			if filter.Match(t) {

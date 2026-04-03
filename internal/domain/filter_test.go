@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseFilter(t *testing.T) {
@@ -13,9 +14,10 @@ func TestParseFilter(t *testing.T) {
 	l := PriorityL
 
 	tests := []struct {
-		name string
-		args []string
-		want Filter
+		name    string
+		args    []string
+		want    Filter
+		wantErr bool
 	}{
 		{
 			name: "empty input",
@@ -78,11 +80,66 @@ func TestParseFilter(t *testing.T) {
 			args: []string{"+urgent", "+important"},
 			want: Filter{HasLabels: []string{"urgent", "important"}},
 		},
+		// Abbreviated prefix tests
+		{
+			name: "abbreviated pro -> project",
+			args: []string{"pro:Work"},
+			want: Filter{Project: "Work"},
+		},
+		{
+			name: "abbreviated pri -> priority",
+			args: []string{"pri:H"},
+			want: Filter{Priority: &h},
+		},
+		{
+			name: "abbreviated due.b -> due.before",
+			args: []string{"due.b:2026-04-10"},
+			want: Filter{DueBefore: "2026-04-10"},
+		},
+		{
+			name: "abbreviated due.a -> due.after",
+			args: []string{"due.a:2026-03-01"},
+			want: Filter{DueAfter: "2026-03-01"},
+		},
+		{
+			name:    "ambiguous d: errors in filter (due.before/due.after)",
+			args:    []string{"d:2026-04-10"},
+			wantErr: true,
+		},
+		{
+			name:    "ambiguous du: errors in filter (due.before/due.after)",
+			args:    []string{"du:2026-04-10"},
+			wantErr: true,
+		},
+		{
+			name: "unrecognized prefix ignored in filter",
+			args: []string{"foo:bar"},
+			want: Filter{},
+		},
+		{
+			name: "par: not a filter attr, ignored",
+			args: []string{"par:abc"},
+			want: Filter{},
+		},
+		{
+			name: "combined abbreviated filters",
+			args: []string{"pro:Home", "pri:L", "due.b:2026-05-01"},
+			want: Filter{
+				Project:   "Home",
+				Priority:  &l,
+				DueBefore: "2026-05-01",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseFilter(tt.args)
+			got, err := ParseFilter(tt.args)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

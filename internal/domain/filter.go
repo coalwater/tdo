@@ -12,27 +12,40 @@ type Filter struct {
 	DueAfter  string
 }
 
+// filterAttrs is the known attribute list for ParseFilter.
+var filterAttrs = []string{"project", "priority", "due.before", "due.after"}
+
 // ParseFilter parses TaskWarrior-style filter arguments into a Filter.
-func ParseFilter(args []string) Filter {
+func ParseFilter(args []string) (Filter, error) {
 	var f Filter
 	for _, arg := range args {
-		switch {
-		case strings.HasPrefix(arg, "project:"):
-			f.Project = strings.TrimPrefix(arg, "project:")
-		case strings.HasPrefix(arg, "priority:"):
-			p := ParsePriority(strings.TrimPrefix(arg, "priority:"))
-			f.Priority = &p
-		case strings.HasPrefix(arg, "+"):
+		if strings.HasPrefix(arg, "+") {
 			f.HasLabels = append(f.HasLabels, strings.TrimPrefix(arg, "+"))
-		case strings.HasPrefix(arg, "-"):
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
 			f.NotLabels = append(f.NotLabels, strings.TrimPrefix(arg, "-"))
-		case strings.HasPrefix(arg, "due.before:"):
-			f.DueBefore = strings.TrimPrefix(arg, "due.before:")
-		case strings.HasPrefix(arg, "due.after:"):
-			f.DueAfter = strings.TrimPrefix(arg, "due.after:")
+			continue
+		}
+
+		attr, value, err := matchAttr(arg, filterAttrs)
+		if err != nil {
+			return Filter{}, err
+		}
+
+		switch attr {
+		case "project":
+			f.Project = value
+		case "priority":
+			p := ParsePriority(value)
+			f.Priority = &p
+		case "due.before":
+			f.DueBefore = value
+		case "due.after":
+			f.DueAfter = value
 		}
 	}
-	return f
+	return f, nil
 }
 
 // Match returns true if the task satisfies all filter criteria.

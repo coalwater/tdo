@@ -29,7 +29,10 @@ Examples:
 			return err
 		}
 
-		attrs := domain.ParseAttributes(args)
+		attrs, err := domain.ParseAttributes(args)
+		if err != nil {
+			return err
+		}
 
 		params := domain.UpdateParams{}
 

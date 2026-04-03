@@ -38,6 +38,14 @@ Examples:
 			params.ProjectID = projectID
 		}
 
+		if attrs.ParentID != "" {
+			result, err := app.ResolveTaskID(ctx, attrs.ParentID)
+			if err != nil {
+				return fmt.Errorf("resolving parent task: %w", err)
+			}
+			params.ParentID = result.TaskID
+		}
+
 		task, err := app.Backend.CreateTask(ctx, params)
 		if err != nil {
 			return err

@@ -13,6 +13,7 @@ type ParsedAttributes struct {
 	Labels       []string
 	RemoveLabels []string
 	Description  string
+	ParentID     string
 }
 
 // ParseAttributes parses a slice of command arguments into structured
@@ -38,6 +39,9 @@ func ParseAttributes(args []string) ParsedAttributes {
 
 		case strings.HasPrefix(arg, "description:"):
 			p.Description = arg[len("description:"):]
+
+		case strings.HasPrefix(arg, "parent:"):
+			p.ParentID = arg[len("parent:"):]
 
 		case strings.HasPrefix(arg, "+"):
 			if len(arg) > 1 {

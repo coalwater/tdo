@@ -116,6 +116,22 @@ func TestParseAttributes(t *testing.T) {
 			args: []string{"task", "project:"},
 			want: ParsedAttributes{Content: "task", Project: ""},
 		},
+		{
+			name: "parent attribute",
+			args: []string{"subtask", "parent:abc123"},
+			want: ParsedAttributes{Content: "subtask", ParentID: "abc123"},
+		},
+		{
+			name: "parent combined with other attributes",
+			args: []string{"subtask", "parent:abc123", "project:Work", "priority:H", "+urgent"},
+			want: ParsedAttributes{
+				Content:  "subtask",
+				ParentID: "abc123",
+				Project:  "Work",
+				Priority: PriorityH,
+				Labels:   []string{"urgent"},
+			},
+		},
 	}
 
 	for _, tt := range tests {

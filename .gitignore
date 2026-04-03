@@ -12,5 +12,8 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Worktrees
+.worktrees/
+
 # Test
 coverage.out

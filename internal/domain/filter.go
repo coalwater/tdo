@@ -1,6 +1,10 @@
 package domain
 
-import "strings"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Filter holds parsed filter criteria. Multiple criteria are AND-ed during matching.
 type Filter struct {
@@ -10,10 +14,11 @@ type Filter struct {
 	NotLabels []string
 	DueBefore string
 	DueAfter  string
+	Limit     int
 }
 
 // filterAttrs is the known attribute list for ParseFilter.
-var filterAttrs = []string{"project", "priority", "due.before", "due.after"}
+var filterAttrs = []string{"project", "priority", "due.before", "due.after", "limit"}
 
 // ParseFilter parses TaskWarrior-style filter arguments into a Filter.
 func ParseFilter(args []string) (Filter, error) {
@@ -43,6 +48,15 @@ func ParseFilter(args []string) (Filter, error) {
 			f.DueBefore = value
 		case "due.after":
 			f.DueAfter = value
+		case "limit":
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				return Filter{}, fmt.Errorf("invalid limit value %q: must be an integer", value)
+			}
+			if n < 0 {
+				return Filter{}, fmt.Errorf("invalid limit value %q: must be non-negative", value)
+			}
+			f.Limit = n
 		}
 	}
 	return f, nil

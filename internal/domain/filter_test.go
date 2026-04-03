@@ -130,6 +130,51 @@ func TestParseFilter(t *testing.T) {
 				DueBefore: "2026-05-01",
 			},
 		},
+		// limit filter tests
+		{
+			name: "limit:5",
+			args: []string{"limit:5"},
+			want: Filter{Limit: 5},
+		},
+		{
+			name: "abbreviated lim:3",
+			args: []string{"lim:3"},
+			want: Filter{Limit: 3},
+		},
+		{
+			name: "abbreviated li:2",
+			args: []string{"li:2"},
+			want: Filter{Limit: 2},
+		},
+		{
+			name: "abbreviated l:1",
+			args: []string{"l:1"},
+			want: Filter{Limit: 1},
+		},
+		{
+			name: "limit:0 means no limit",
+			args: []string{"limit:0"},
+			want: Filter{Limit: 0},
+		},
+		{
+			name:    "limit:abc errors",
+			args:    []string{"limit:abc"},
+			wantErr: true,
+		},
+		{
+			name:    "limit:-1 errors",
+			args:    []string{"limit:-1"},
+			wantErr: true,
+		},
+		{
+			name: "limit combined with other filters",
+			args: []string{"project:Work", "+urgent", "limit:10"},
+			want: Filter{
+				Project:   "Work",
+				HasLabels: []string{"urgent"},
+				Limit:     10,
+			},
+		},
 	}
 
 	for _, tt := range tests {

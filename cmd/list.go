@@ -50,6 +50,11 @@ Examples:
 			return ui > uj
 		})
 
+		// Apply limit after sorting.
+		if filter.Limit > 0 && filter.Limit < len(filtered) {
+			filtered = filtered[:filter.Limit]
+		}
+
 		if jsonOutput {
 			items := make([]taskJSON, len(filtered))
 			positions := make(map[int]string, len(filtered))

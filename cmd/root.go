@@ -87,6 +87,11 @@ func RewriteIDArgs(args []string) ([]string, error) {
 		return args, nil
 	}
 
+	// Cobra uses __complete / __completeNoDesc for shell completion — pass through untouched.
+	if args[1] == "__complete" || args[1] == "__completeNoDesc" {
+		return args, nil
+	}
+
 	// Try to expand args[1] as a command (handles "tdo mod pri:H").
 	first := args[1]
 	cmd, err := matchCommand(first)

@@ -175,6 +175,16 @@ func TestRewriteIDArgs(t *testing.T) {
 			args: []string{"tdo", "ur"},
 			want: []string{"tdo", "url"},
 		},
+		{
+			name: "__complete passthrough (cobra shell completion)",
+			args: []string{"tdo", "__complete", "inf", ""},
+			want: []string{"tdo", "__complete", "inf", ""},
+		},
+		{
+			name: "__completeNoDesc passthrough (cobra shell completion)",
+			args: []string{"tdo", "__completeNoDesc", "inf", ""},
+			want: []string{"tdo", "__completeNoDesc", "inf", ""},
+		},
 	}
 
 	for _, tt := range tests {

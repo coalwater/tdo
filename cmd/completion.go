@@ -82,3 +82,17 @@ func getProjectNames(ctx context.Context) ([]string, error) {
 	}
 	return names, nil
 }
+
+// getLabelNames returns a list of label names for shell completion.
+func getLabelNames(ctx context.Context) ([]string, error) {
+	labels, err := app.GetLabels(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, len(labels))
+	for i, l := range labels {
+		names[i] = l.Name
+	}
+	return names, nil
+}

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -66,4 +67,18 @@ PowerShell:
 		}
 		return nil
 	},
+}
+
+// getProjectNames returns a list of project names for shell completion.
+func getProjectNames(ctx context.Context) ([]string, error) {
+	projects, err := app.GetProjects(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, len(projects))
+	for i, p := range projects {
+		names[i] = p.Name
+	}
+	return names, nil
 }

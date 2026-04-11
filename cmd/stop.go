@@ -8,7 +8,8 @@ import (
 )
 
 var stopCmd = &cobra.Command{
-	Use:   "stop",
+	Hidden: true,
+	Use:    "stop",
 	Short: "Stop working on a task",
 	Long: `Remove the now label from a task, marking it as no longer active.
 

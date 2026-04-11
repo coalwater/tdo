@@ -7,7 +7,8 @@ import (
 )
 
 var doneCmd = &cobra.Command{
-	Use:   "done",
+	Hidden: true,
+	Use:    "done",
 	Short: "Mark a task as completed",
 	Long: `Mark a task as completed.
 

@@ -7,7 +7,8 @@ import (
 )
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete",
+	Hidden: true,
+	Use:    "delete",
 	Short: "Delete a task",
 	Long: `Delete a task permanently.
 

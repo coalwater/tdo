@@ -9,7 +9,8 @@ import (
 )
 
 var modifyCmd = &cobra.Command{
-	Use:   "modify [attributes...]",
+	Hidden: true,
+	Use:    "modify [attributes...]",
 	Short: "Modify a task's attributes",
 	Long: `Modify a task's attributes.
 

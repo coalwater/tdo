@@ -9,10 +9,25 @@ import (
 
 var jsonOutput bool
 
+// idCmds lists commands that require a task ID, used for completion after `tdo <id> <TAB>`.
+var idCmds = []string{"done", "delete", "modify", "start", "stop", "info", "annotate", "url"}
+
 var rootCmd = &cobra.Command{
-	Use:   "tdo",
+	Use:   "tdo [id] <command>",
 	Short: "TaskWarrior-compatible CLI backed by Todoist",
-	Long:  "tdo provides a TaskWarrior-compatible command-line interface using Todoist as the backend. Cloud sync, mobile access, and collaboration — with the CLI you know.",
+	Long: `tdo — TaskWarrior-compatible CLI backed by Todoist.
+
+Task actions require a task ID as the first argument:
+
+  tdo <id> done
+  tdo <id> modify pri:H due:friday
+  tdo <id> info
+
+List and management commands work without an ID:
+
+  tdo list
+  tdo add "Buy milk" due:tomorrow
+  tdo next`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip app init for commands that don't need the backend.
 		switch cmd.Name() {
@@ -20,6 +35,19 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 		return initApp()
+	},
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// Only offer ID-requiring commands when the first positional arg (the task ID) is already present.
+		if len(args) != 1 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		var matches []string
+		for _, name := range idCmds {
+			if strings.HasPrefix(name, toComplete) {
+				matches = append(matches, name)
+			}
+		}
+		return matches, cobra.ShellCompDirectiveNoFileComp
 	},
 }
 

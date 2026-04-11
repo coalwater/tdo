@@ -3,9 +3,77 @@ package cmd
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// idRequiringCommandNames are commands that only make sense with a task ID.
+var idRequiringCommandNames = []string{"done", "delete", "modify", "start", "stop", "info", "annotate", "url"}
+
+func TestIDRequiringCommandsAreHidden(t *testing.T) {
+	lookup := make(map[string]*cobra.Command)
+	for _, sub := range rootCmd.Commands() {
+		lookup[sub.Name()] = sub
+	}
+	for _, name := range idRequiringCommandNames {
+		cmd, ok := lookup[name]
+		require.True(t, ok, "command %q not found in root", name)
+		assert.True(t, cmd.Hidden, "command %q should be Hidden so it doesn't appear in tdo <tab>", name)
+	}
+}
+
+func TestRootValidArgsFunction_WithID(t *testing.T) {
+	fn := rootCmd.ValidArgsFunction
+	require.NotNil(t, fn, "rootCmd.ValidArgsFunction must be set")
+
+	tests := []struct {
+		name       string
+		args       []string
+		toComplete string
+		wantSome   []string
+		wantNone   []string
+	}{
+		{
+			name:       "no args returns nothing (subcommands handle it)",
+			args:       []string{},
+			toComplete: "",
+			wantNone:   idRequiringCommandNames,
+		},
+		{
+			name:       "id arg returns all id-requiring commands",
+			args:       []string{"3"},
+			toComplete: "",
+			wantSome:   idRequiringCommandNames,
+		},
+		{
+			name:       "id arg with partial filters correctly",
+			args:       []string{"3"},
+			toComplete: "do",
+			wantSome:   []string{"done"},
+			wantNone:   []string{"modify", "start", "stop", "info", "annotate", "url", "delete"},
+		},
+		{
+			name:       "id arg with no match returns empty",
+			args:       []string{"3"},
+			toComplete: "xyz",
+			wantNone:   idRequiringCommandNames,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, directive := fn(rootCmd, tt.args, tt.toComplete)
+			assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+			for _, want := range tt.wantSome {
+				assert.Contains(t, got, want, "expected %q in completions", want)
+			}
+			for _, none := range tt.wantNone {
+				assert.NotContains(t, got, none, "expected %q NOT in completions", none)
+			}
+		})
+	}
+}
 
 func TestMatchCommand(t *testing.T) {
 	tests := []struct {

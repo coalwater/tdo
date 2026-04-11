@@ -8,7 +8,8 @@ import (
 )
 
 var annotateCmd = &cobra.Command{
-	Use:   "annotate <text>",
+	Hidden: true,
+	Use:    "annotate <text>",
 	Short: "Add a comment to a task",
 	Long: `Add a comment/annotation to a task.
 

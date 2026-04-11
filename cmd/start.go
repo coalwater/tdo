@@ -8,7 +8,8 @@ import (
 )
 
 var startCmd = &cobra.Command{
-	Use:   "start",
+	Hidden: true,
+	Use:    "start",
 	Short: "Start working on a task",
 	Long: `Mark a task as actively being worked on by adding the now label.
 

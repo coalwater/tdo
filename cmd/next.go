@@ -21,9 +21,16 @@ Examples:
   tdo next
   tdo next project:Work +urgent
   tdo next limit:5`,
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		now := time.Now()
+
+		_, jsonOut, help, remaining := extractFlags(args)
+		if help {
+			return cmd.Help()
+		}
+		jsonOutput = jsonOut
 
 		tasks, err := app.GetTasks(ctx)
 		if err != nil {
@@ -33,7 +40,7 @@ Examples:
 		app.EnrichProjectNames(ctx, tasks)
 
 		// Apply filters.
-		filter, err := domain.ParseFilter(args, now)
+		filter, err := domain.ParseFilter(remaining, now)
 		if err != nil {
 			return err
 		}

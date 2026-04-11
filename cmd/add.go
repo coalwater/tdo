@@ -20,11 +20,22 @@ Attributes:
 Examples:
   tdo add "Fix login bug" project:Backend priority:H due:friday +urgent
   tdo add "Buy groceries" due:eom scheduled:tomorrow +shopping`,
-	Args: cobra.MinimumNArgs(1),
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		now := time.Now()
-		attrs, err := domain.ParseAttributes(args, now)
+
+		_, jsonOut, help, remaining := extractFlags(args)
+		if help {
+			return cmd.Help()
+		}
+		jsonOutput = jsonOut
+
+		if len(remaining) == 0 {
+			return fmt.Errorf("accepts 1 arg(s), received 0")
+		}
+
+		attrs, err := domain.ParseAttributes(remaining, now)
 		if err != nil {
 			return err
 		}

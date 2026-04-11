@@ -19,10 +19,17 @@ Examples:
   tdo list
   tdo list project:Backend priority:H +urgent
   tdo list due.before:2024-12-31`,
-	Aliases: []string{"ls"},
+	Aliases:            []string{"ls"},
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		now := time.Now()
+
+		_, jsonOut, help, remaining := extractFlags(args)
+		if help {
+			return cmd.Help()
+		}
+		jsonOutput = jsonOut
 
 		tasks, err := app.GetTasks(ctx)
 		if err != nil {
@@ -32,7 +39,7 @@ Examples:
 		app.EnrichProjectNames(ctx, tasks)
 
 		// Apply filters.
-		filter, err := domain.ParseFilter(args, now)
+		filter, err := domain.ParseFilter(remaining, now)
 		if err != nil {
 			return err
 		}

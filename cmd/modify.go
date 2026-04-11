@@ -21,11 +21,17 @@ Examples:
   tdo 3 modify priority:H due:friday
   tdo 3 modify project:Backend +urgent -old-tag
   tdo 3 modify scheduled:tomorrow due:eom`,
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		now := time.Now()
 
-		id, _ := cmd.Flags().GetString("id")
+		id, jsonOut, help, remaining := extractFlags(args)
+		if help {
+			return cmd.Help()
+		}
+		jsonOutput = jsonOut
+
 		if id == "" {
 			return fmt.Errorf("task ID is required")
 		}
@@ -35,7 +41,7 @@ Examples:
 			return err
 		}
 
-		attrs, err := domain.ParseAttributes(args, now)
+		attrs, err := domain.ParseAttributes(remaining, now)
 		if err != nil {
 			return err
 		}
@@ -117,9 +123,4 @@ Examples:
 		fmt.Fprintf(cmd.OutOrStdout(), "Modified task '%s'.\n", content)
 		return nil
 	},
-}
-
-func init() {
-	modifyCmd.Flags().String("id", "", "Task ID (set automatically by ID-first routing)")
-	_ = modifyCmd.Flags().MarkHidden("id")
 }

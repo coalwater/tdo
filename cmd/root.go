@@ -16,7 +16,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip app init for commands that don't need the backend.
 		switch cmd.Name() {
-		case "version", "help":
+		case "version", "help", "completion":
 			return nil
 		}
 		return initApp()
@@ -29,22 +29,23 @@ func init() {
 
 // knownCommands is the set of subcommand names for ID-first routing.
 var knownCommands = map[string]bool{
-	"add":      true,
-	"list":     true,
-	"ls":       true,
-	"next":     true,
-	"projects": true,
-	"tags":     true,
-	"version":  true,
-	"help":     true,
-	"done":     true,
-	"delete":   true,
-	"modify":   true,
-	"start":    true,
-	"stop":     true,
-	"info":     true,
-	"annotate": true,
-	"url":      true,
+	"add":        true,
+	"list":       true,
+	"ls":         true,
+	"next":       true,
+	"projects":   true,
+	"tags":       true,
+	"version":    true,
+	"help":       true,
+	"done":       true,
+	"delete":     true,
+	"modify":     true,
+	"start":      true,
+	"stop":       true,
+	"info":       true,
+	"annotate":   true,
+	"url":        true,
+	"completion": true,
 }
 
 // matchCommand resolves a possibly-abbreviated command name against knownCommands.
@@ -141,4 +142,5 @@ func init() {
 	rootCmd.AddCommand(projectsCmd)
 	rootCmd.AddCommand(tagsCmd)
 	rootCmd.AddCommand(urlCmd)
+	rootCmd.AddCommand(completionCmd)
 }

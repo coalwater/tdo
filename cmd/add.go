@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/abushady/tdo/internal/domain"
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,9 @@ Examples:
 			return err
 		}
 
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpAdd, CreatedID: task.ID, Timestamp: time.Now()})
+		}
 		_ = app.Cache.InvalidateTasks()
 
 		if jsonOutput {

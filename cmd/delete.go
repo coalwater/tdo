@@ -2,14 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
 var deleteCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "delete",
-	Short: "Delete a task",
+	Short:  "Delete a task",
 	Long: `Delete a task permanently.
 
 Examples:
@@ -26,6 +28,15 @@ Examples:
 		result, err := app.ResolveTaskID(ctx, id)
 		if err != nil {
 			return err
+		}
+
+		// Always fetch full task for delete: we need all fields for re-creation.
+		task, _ := app.Backend.GetTask(ctx, result.TaskID)
+		if task == nil {
+			task = result.Task
+		}
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpDelete, TaskID: result.TaskID, Snapshot: task, Timestamp: time.Now()})
 		}
 
 		if err := app.Backend.DeleteTask(ctx, result.TaskID); err != nil {

@@ -2,14 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
 var doneCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "done",
-	Short: "Mark a task as completed",
+	Short:  "Mark a task as completed",
 	Long: `Mark a task as completed.
 
 Examples:
@@ -26,6 +28,14 @@ Examples:
 		result, err := app.ResolveTaskID(ctx, id)
 		if err != nil {
 			return err
+		}
+
+		task := result.Task
+		if task == nil {
+			task, _ = app.Backend.GetTask(ctx, result.TaskID)
+		}
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpDone, TaskID: result.TaskID, Snapshot: task, Timestamp: time.Now()})
 		}
 
 		if err := app.Backend.CompleteTask(ctx, result.TaskID); err != nil {

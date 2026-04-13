@@ -9,7 +9,7 @@ import (
 var urlCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "url",
-	Short: "Print the Todoist web URL for a task",
+	Short:  "Print the Todoist web URL for a task",
 	Long: `Print the Todoist web URL for a task.
 
 Examples:

@@ -13,6 +13,7 @@ import (
 	"github.com/abushady/tdo/internal/backend/todoist"
 	"github.com/abushady/tdo/internal/cache"
 	"github.com/abushady/tdo/internal/domain"
+	"github.com/abushady/tdo/internal/undo"
 )
 
 // App wires together the backend, cache, and configuration for all commands.
@@ -20,6 +21,7 @@ type App struct {
 	Backend  backend.Backend
 	Cache    *cache.Cache
 	NowLabel string
+	UndoLog  *undo.Log
 }
 
 // app holds the lazily-initialized App instance.
@@ -62,6 +64,7 @@ func NewApp() (*App, error) {
 		Backend:  client,
 		Cache:    cache.New(cacheDir, ttl),
 		NowLabel: nowLabel,
+		UndoLog:  undo.NewLog(cacheDir, 10),
 	}, nil
 }
 

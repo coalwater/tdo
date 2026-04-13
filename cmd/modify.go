@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/abushady/tdo/internal/domain"
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
 var modifyCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "modify [attributes...]",
-	Short: "Modify a task's attributes",
+	Short:  "Modify a task's attributes",
 	Long: `Modify a task's attributes.
 
 Attributes:
@@ -101,6 +102,15 @@ Examples:
 				return err
 			}
 			params.ProjectID = &projectID
+		}
+
+		// Snapshot for undo: use the task we may have fetched for label merging.
+		snapshotTask := result.Task
+		if snapshotTask == nil {
+			snapshotTask, _ = app.Backend.GetTask(ctx, result.TaskID)
+		}
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpModify, TaskID: result.TaskID, Snapshot: snapshotTask, Timestamp: time.Now()})
 		}
 
 		if err := app.Backend.UpdateTask(ctx, result.TaskID, params); err != nil {

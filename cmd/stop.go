@@ -2,15 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/abushady/tdo/internal/domain"
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
 var stopCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "stop",
-	Short: "Stop working on a task",
+	Short:  "Stop working on a task",
 	Long: `Remove the now label from a task, marking it as no longer active.
 
 Examples:
@@ -41,6 +43,10 @@ Examples:
 		if !task.HasLabel(app.NowLabel) {
 			fmt.Fprintf(cmd.OutOrStdout(), "Task '%s' is not started.\n", task.Content)
 			return nil
+		}
+
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpStop, TaskID: result.TaskID, Snapshot: task, Timestamp: time.Now()})
 		}
 
 		// Remove now label.

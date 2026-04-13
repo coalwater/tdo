@@ -2,15 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/abushady/tdo/internal/domain"
+	"github.com/abushady/tdo/internal/undo"
 	"github.com/spf13/cobra"
 )
 
 var startCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "start",
-	Short: "Start working on a task",
+	Short:  "Start working on a task",
 	Long: `Mark a task as actively being worked on by adding the now label.
 
 Examples:
@@ -42,6 +44,10 @@ Examples:
 		if task.HasLabel(app.NowLabel) {
 			fmt.Fprintf(cmd.OutOrStdout(), "Task '%s' is already started.\n", task.Content)
 			return nil
+		}
+
+		if app.UndoLog != nil {
+			_ = app.UndoLog.Push(undo.Entry{Op: undo.OpStart, TaskID: result.TaskID, Snapshot: task, Timestamp: time.Now()})
 		}
 
 		labels := make([]string, len(task.Labels), len(task.Labels)+1)

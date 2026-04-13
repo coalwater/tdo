@@ -74,6 +74,7 @@ var knownCommands = map[string]bool{
 	"annotate":   true,
 	"url":        true,
 	"completion": true,
+	"undo":       true,
 }
 
 // matchCommand resolves a possibly-abbreviated command name against knownCommands.
@@ -176,4 +177,5 @@ func init() {
 	rootCmd.AddCommand(tagsCmd)
 	rootCmd.AddCommand(urlCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(undoCmd)
 }

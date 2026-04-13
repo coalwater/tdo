@@ -12,7 +12,7 @@ import (
 var infoCmd = &cobra.Command{
 	Hidden: true,
 	Use:    "info",
-	Short: "Show detailed task information",
+	Short:  "Show detailed task information",
 	Long: `Show detailed information about a task including comments.
 
 Examples:
